@@ -14,7 +14,7 @@ import numpy as np
 #  but it does NOT depend on its joint angle.
 class LinkTreeModel:
 
-    def __init__(self, jointlinks, g, parent_idx=None):
+    def __init__(self, jointlinks, g, X0=eye(3), parent_idx=None):
         self.jointlinks = jointlinks
         self.NB = len(jointlinks)
         self.dim = 3 # num of dimension of spatial/planar vector
@@ -22,6 +22,7 @@ class LinkTreeModel:
         self.g = g
         self.accb = zeros(self.dim, 1)
         self.velb = zeros(self.dim, 1)
+        self.X0 = X0
 
         if parent_idx is None:
             # list
@@ -47,7 +48,7 @@ class LinkTreeModel:
             if j != -1: # parent is not root
                 XT = self.jointlinks[j].XT
             else:
-                XT = eye(self.dim)
+                XT = self.X0
             X_j_to_i = XJ * XT
             self.X_parent_to[i] = X_j_to_i
 
@@ -192,8 +193,8 @@ class LinkTreeModel:
             return np.linalg.solve(A, b)
         return ddq_f
 
-    def calc_cog(self, ith=0):
-        _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].XJ()))
+    def calc_cog(self, ith=0): # global coordinate
+        _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].X_r_to))
         return Matrix([cx, cy])
 
     def gen_draw_cmds(self, input_sym_list, ctx):
@@ -243,7 +244,6 @@ def test1():
     jl1 = StickJointLink("q1", m1, l1, RevoluteJoint(), cx=l1, XT=Xpln(pi/2, l1, 0), Icog=Ic1)
     model = LinkTreeModel([jl1], g)
     print(simplify(model.calc_cog()))
-    print(simplify(model.calc_cog2()))
 
 def test2():
     g = symbols("g")
@@ -271,7 +271,6 @@ def test2():
     Ic = simplify(transInertia(I1 + I2X, Xc))
     print("rot")
     printI(Ic)
-    print(simplify(model.calc_cog() - model.calc_cog2()))
 
 def test3():
     g = symbols("g")
@@ -296,7 +295,6 @@ def test3():
     Xc = Xpln(-th, 0, 0)
     Ic = simplify(transInertia(I1, Xc))
     printI(Ic)
-    print(simplify(expand(model.calc_cog() - model.calc_cog2())))
 
 
 if __name__ == '__main__':

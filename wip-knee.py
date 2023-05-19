@@ -88,7 +88,6 @@ def test():
     v_uw = 0
     v_uk = 0
     x0_v = 0
-    printM(model_g.H)
 
     def event_handler(key, shifted):
         nonlocal v_ref
