@@ -303,15 +303,18 @@ def test3():
 
 def test():
     g = symbols("g")
-    m, r = symbols("m, r")
+    m, r, l = symbols("m, r, l")
     js = [ StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
-         , WheelJointLink("qw", m, r, RackPinionJoint(r))]
-    js = [WheelJointLink("qw", m, r, RackPinionJoint(r))]
-    model = LinkTreeModel(js, g, X0=Xpln(pi/2, 0, r))
+         , WheelJointLink("qw", m, r, RackPinionJoint(r), XT=Xpln(pi/2, 0, 0))
+         , StickJointLink("ql", m, l, RevoluteJoint(), cx=l)
+         ]
+    #js = [WheelJointLink("qw", m, r, RackPinionJoint(r))]
+    model = LinkTreeModel(js, g, X0=Xpln(pi/2, 0, 0))
     for i in range(len(js)):
         print(i)
-        print(simplify(fromX(model.jointlinks[i].X_r_to)))
-    draw_cmds = model.gen_draw_cmds([], {r:0.1})
+        th, x, y = fromX(model.jointlinks[i].X_r_to)
+        print((simplify(th), simplify(x),simplify(y)))
+    draw_cmds = model.gen_draw_cmds([], {r:0.1, l:0.5})
     cmds = draw_cmds([0 for i in range(len(js))], [0 for i in range(len(js))], [])
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
