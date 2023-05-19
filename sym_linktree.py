@@ -12,6 +12,10 @@ import numpy as np
 # NOTE
 #  Ic[i] is i-th body corrdinate inertia matrix of accumlated bodies after i
 #  but it does NOT depend on its joint angle.
+# X_r_to[i] transfer matrix to i-th body local coordinate from global(root) coordinate
+# NOTE:
+# i-th body local coordinate is transfered with its joint to the parent!!
+# => X_r_to[0] may not be same as X0
 class LinkTreeModel:
 
     def __init__(self, jointlinks, g, X0=eye(3), parent_idx=None):
