@@ -301,6 +301,35 @@ def test3():
     printM(Ic)
 
 
+def test():
+    g = symbols("g")
+    m, r = symbols("m, r")
+    js = [ StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
+         , WheelJointLink("qw", m, r, RackPinionJoint(r))]
+    js = [WheelJointLink("qw", m, r, RackPinionJoint(r))]
+    model = LinkTreeModel(js, g, X0=Xpln(pi/2, 0, r))
+    for i in range(len(js)):
+        print(i)
+        print(simplify(fromX(model.jointlinks[i].X_r_to)))
+    draw_cmds = model.gen_draw_cmds([], {r:0.1})
+    cmds = draw_cmds([0 for i in range(len(js))], [0 for i in range(len(js))], [])
+    import graphic
+    viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
+
+    def event_handler(key, shifted):
+        if key == 'q':
+            sys.exit()
+
+
+    while True:
+        viewer.handle_event(event_handler)
+        viewer.clear()
+        #viewer.text([f"t: {t:.03f} :q {q[0]:.03f} {q[1]:.03f}"])
+        viewer.draw(cmds)
+        viewer.draw_horizon(0)
+        viewer.flush(0.01)
+    sys.exit(0)
+
 if __name__ == '__main__':
-    test3()
+    test()
 
