@@ -191,7 +191,7 @@ class StickJointLink(JointLink):
         def draw_cmd(v):
             X = X_r_to_f(*v)
             l = l_f(*v)
-            return draw_lineseg_cmd(X, l) + draw_circle_cmd(X, 0.01)
+            return draw_lineseg_cmd(X, l, name=self.name) + draw_circle_cmd(X, 0.01, name=self.name)
         return draw_cmd
 
     def joint_force(self):
@@ -225,7 +225,7 @@ class WheelJointLink(JointLink):
         def draw_cmd(v):
             X = X_r_to_f(*v)
             r = r_f(*v)
-            return draw_lineseg_cmd(X, r) + draw_circle_cmd(X, r)
+            return draw_lineseg_cmd(X, r, name=self.name) + draw_circle_cmd(X, r, name=self.name)
         return draw_cmd
 
 def test1():

@@ -204,7 +204,7 @@ class LinkTreeModel:
         eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(ctx))
         def draw_cmds(qv, dqv, v):
             p = eval_cog_pos(*qv, *v)
-            return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue"))
+            return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue", name="cog"))
         return draw_cmds
 
 def test1():
@@ -221,9 +221,9 @@ def test1():
     model = LinkTreeModel([jl1, jl2], g)
     I0 = simplify(model.Ic[0])
     I1 = simplify(model.Ic[1])
-    printI(I0)
+    printM(I0)
     print(I2mc(I0))
-    printI(I1)
+    printM(I1)
     print(I2mc(I1))
     print(jl2.I)
     print("cog x", model.cog[0,0])
@@ -235,7 +235,7 @@ def test1():
 
     th = atan2(model.cog[1,0], model.cog[0,0]).subs({q1:0})
     print(th)
-    printI(simplify(transInertia(I, Xpln(-th, 0, 0))), "XIX")
+    printM(simplify(transInertia(I, Xpln(-th, 0, 0))), "XIX")
 
 def test1():
     g = symbols("g")
@@ -257,20 +257,20 @@ def test2():
     q2 = jl2.q
     model = LinkTreeModel([jl1, jl2], g)
     print("tree")
-    printI(simplify(model.Ic[0]))
+    printM(simplify(model.Ic[0]))
 
     I1 = mcI(m1, [l1, 0], Ic1)
     I2 = mcI(m2, [l2, 0], Ic2)
     X = Xpln(q2, l1, 0)
     I2X = simplify(transInertia(I2, X))
     print("sum")
-    printI(I1 + I2X)
+    printM(I1 + I2X)
     _, cx, cy, _ = I2mc(I1 + I2X)
     th = atan2(cy, cx)
     Xc = Xpln(-th, 0, 0)
     Ic = simplify(transInertia(I1 + I2X, Xc))
     print("rot")
-    printI(Ic)
+    printM(Ic)
 
 def test3():
     g = symbols("g")
@@ -294,7 +294,7 @@ def test3():
     th = atan2(cy, cx)
     Xc = Xpln(-th, 0, 0)
     Ic = simplify(transInertia(I1, Xc))
-    printI(Ic)
+    printM(Ic)
 
 
 if __name__ == '__main__':
