@@ -67,11 +67,11 @@ def Xplnr(th, x, y):
 
 
 
-def fromX(X):
+def fromX(X, simp=False):
     th = atan2(X[1,2], X[1,1])
     x = X[1,0] * X[1,2] + X[2,0] * X[2,2]
     y = -X[1,0] * X[2,2] + X[2,0] * X[1,2] 
-    return (th, x, y)
+    return (simplify(th), simplify(x), simplify(y))
 
 # NOTE:
 # vector does not express "position"

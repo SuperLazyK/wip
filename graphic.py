@@ -9,6 +9,10 @@ import sys
 # Draw
 #-------------------------
 
+def arr2txt(a, title=""):
+    a2 = a.reshape(-1)
+    return " ".join([f"{title}[{i}]: {a2[i]:.03f}" for i in range(a2.shape[0])])
+
 SCREEN_SIZE=(1300, 500)
 
 WHITE = (255, 255, 255)

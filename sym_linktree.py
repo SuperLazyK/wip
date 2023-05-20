@@ -211,6 +211,10 @@ class LinkTreeModel:
             return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue", name="cog"))
         return draw_cmds
 
+    def joint_info(self, simp=True):
+        for jl in self.jointlinks:
+            print(jl.name, fromX(jl.X_r_to, simp))
+
 def test1():
     g = symbols('g')
     l1, m1 = symbols('l1 m1')
