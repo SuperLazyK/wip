@@ -305,11 +305,17 @@ def test():
     g = symbols("g")
     m, r, l = symbols("m, r, l")
     js = [ StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
+         , StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(0, 0, 0)) 
+         , WheelJointLink("qw", m, r, RackPinionJoint(r), XT=Xpln(pi/2, 0, 0))
+         , StickJointLink("ql", m, l, RevoluteJoint(), cx=l)
+         ]
+    js = [ StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(pi/2, 0, 0))
+         , StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0)) 
          , WheelJointLink("qw", m, r, RackPinionJoint(r), XT=Xpln(pi/2, 0, 0))
          , StickJointLink("ql", m, l, RevoluteJoint(), cx=l)
          ]
     #js = [WheelJointLink("qw", m, r, RackPinionJoint(r))]
-    model = LinkTreeModel(js, g, X0=Xpln(pi/2, 0, 0))
+    model = LinkTreeModel(js, g, X0=Xpln(0, 0, 0))
     for i in range(len(js)):
         print(i)
         th, x, y = fromX(model.jointlinks[i].X_r_to)
