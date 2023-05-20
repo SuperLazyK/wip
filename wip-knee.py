@@ -31,10 +31,14 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
 # NOTE normal force is ignored due to constraint
 def sym_models_ground():
     # initial wheel angle should be vertical
+    jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
     jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
     jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
     jl3 = StickSpringJointLink("qh", mh, lh, k, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-    plant_model = LinkTreeModel([jl1, jl2, jl3], g)
+    plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+
+    plant_model = LinkTreeModel([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+    #plant_model.joint_info()
     return plant_model
 
 
@@ -89,10 +93,13 @@ def test():
     v_uk = 0
     x0_v = 0
 
+    pause = True
     def event_handler(key, shifted):
-        nonlocal v_ref
+        nonlocal v_ref, pause
         if key == 'q':
             sys.exit()
+        elif key == 's':
+            pause = pause ^ True
         elif key == 'l':
             v_ref = 5
         elif key == 'h':
@@ -101,18 +108,11 @@ def test():
             v_ref = 0
 
     while True:
-        t = t + dt
         if in_air:
             pass
         else:
-            Kp = 1000
-            Kd = 100
-            v_uk = Kp*(p_ref - q_v[2]) - Kd * dq_v[2] + cancel_bias_force(*q_v, *dq_v)
-            v_uw = wip_wheel_torq(K, v_ref, q_v, dq_v, a0f(0))
-            v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-            v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
-            q_v, dq_v = euler_step(ddqf_g, q_v, dq_v, dt, [v_uw, v_uk, x0_v])
             cmds = draw_g_cmds(q_v, dq_v, [x0_v])
+
         viewer.handle_event(event_handler)
         viewer.clear()
         viewer.text([ f"t: {t:.03f}"
@@ -123,6 +123,22 @@ def test():
         viewer.draw(cmds)
         viewer.draw_horizon(0)
         viewer.flush(dt)
+
+        if pause:
+            continue
+
+        t = t + dt
+
+        if in_air:
+            pass
+        else:
+            Kp = 1000
+            Kd = 100
+            v_uk = Kp*(p_ref - q_v[2]) - Kd * dq_v[2] + cancel_bias_force(*q_v, *dq_v)
+            v_uw = wip_wheel_torq(K, v_ref, q_v, dq_v, a0f(0))
+            v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
+            v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
+            q_v, dq_v = euler_step(ddqf_g, q_v, dq_v, dt, [v_uw, v_uk, x0_v])
 
 if __name__ == '__main__':
     test()
