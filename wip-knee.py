@@ -57,25 +57,18 @@ class WIPG(LinkTreeModel):
         self.v_uw = 0
 
         qh = self.qh()
-        vmodel_g, a0 = self.virtual_wip_model_ground()
-        #reuse = False
-        reuse = True
-        if reuse:
-            self.K = np.array([[-1., 11.20462078, 50.02801177]])
-            # qh 0 : [[-1.         11.20462078 50.02801177]]
-            # qh 45 : [[-1.         13.53793325 55.79660305]]
-            # qh -45 : [[-1.          7.98246651 39.40143798]]
-        else:
-            #self.K = wip_gain(vmodel_g, context | {qh:0})
-            self.K = wip_gain(vmodel_g, context | {qh:self.qh_v()})
-            #self.K = wip_gain(vmodel_g, context | {qh:np.deg2rad(-45)})
-        ## [lh*mh*(-(dql+dqw)**2*ll*cos(qh) + g*cos(qh + ql + qw))]])
-        self.cancel_force_knee = self.cancel_bias_force_knee()
+        A, B, a0 = self.virtual_wip_model_ground()
+        self.Af = lambdify([qh], A.subs(context))
+        self.Bf = lambdify([qh], B.subs(context))
         self.a0f = lambdify([qh], a0.subs(context))
+        self.cancel_force_knee = self.cancel_bias_force_knee()
+        self.update_gain()
 
         self.ddqf_g = self.gen_ddq_f(self.sim_input(), context)
         self.draw_g_cmds = self.gen_draw_cmds(self.draw_input(), context)
 
+    def update_gain(self):
+        self.K, _, _ = ct.lqr(self.Af(self.p_ref), self.Bf(self.p_ref), np.diag([1,1,1]), 1)
 
     def sim_input(self):
         return [uw, uk, x0]
@@ -121,14 +114,11 @@ class WIPG(LinkTreeModel):
 
     def virtual_wip_model_ground(self):
         vI = simplify(self.Ic[self.IDX_L]) # stick inertia
-        vm, cx, cy, _ = I2mc(vI)
+        vmb, cx, cy, vIb = I2mc(vI)
         vl = simplify(sqrt(cx**2+cy**2))
         vtheta = atan2(cy, cx)
-        X = Xpln(-vtheta, 0, 0)
-        jl1 = WheelJointLink("vqw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
-        jl2 = StickJointLink("vqs", vm, vl, RevoluteJoint(), cx=vl, I=transInertia(vI, X), tau=uw)
-        vwip_model = LinkTreeModel([jl1, jl2], g)
-        return vwip_model, vtheta
+        A, B = wip_lin_system(g, r, vl, mw, vmb, Iw, vIb)
+        return A, B, vtheta
 
     def cancel_bias_force_knee(self):
         return lambdify(self.q() + self.dq(), simplify(self.counter_joint_force()[self.IDX_H,0]).subs(context))

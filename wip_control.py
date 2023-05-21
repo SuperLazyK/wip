@@ -7,7 +7,7 @@ from sym_arith import *
 # if link has more than 2 bodies, assume dqq[j]=0 for j > 2
 # This measn bias force Cj and inertial force H[:,:2] * q[:2] is
 # canceled with joint force for j >2.
-def linealize(model, equib_offset, Q=np.diag([1,1,1]), R=1):
+def linealize(model, equib_offset):
     phi,dphi,ddphi = symbols('phi dphi ddphi')
     th, dth, ddth  = symbols('th dth ddth')
 
@@ -51,9 +51,12 @@ def linealize(model, equib_offset, Q=np.diag([1,1,1]), R=1):
 
     print("A", A)
     print("B", B)
-    #A Matrix([[0, 0, g*l*mb*(Iw + l*mb*r + mb*r**2 + mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0, 0, g*l*mb*(Iw + mb*r**2 + mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0, 1, 0]])
-    #B Matrix([[-(-Ib - Iw - l**2*mb - 2*l*mb*r - mb*r**2 - mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [-(-Iw - l*mb*r - mb*r**2 - mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0]])
 
+    return A, B
+
+def wip_lin_system(g, r, l, mw, mb, Iw, Ib):
+    A=Matrix([[0, 0, g*l*mb*(Iw + l*mb*r + mb*r**2 + mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0, 0, g*l*mb*(Iw + mb*r**2 + mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0, 1, 0]])
+    B=Matrix([[-(-Ib - Iw - l**2*mb - 2*l*mb*r - mb*r**2 - mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [-(-Iw - l*mb*r - mb*r**2 - mw*r**2)/(Ib*Iw + Ib*mb*r**2 + Ib*mw*r**2 + Iw*l**2*mb + l**2*mb*mw*r**2)], [0]])
     return A, B
 
 def wip_gain(context, A, B, Q=np.diag([1,1,1]), R=1):
