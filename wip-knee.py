@@ -46,6 +46,16 @@ class WIPG(LinkTreeModel):
         #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
 
+        # initial status
+        self.q_v = self.qv(qh=np.deg2rad(0))
+        #self.q_v = self.qv(qh=np.deg2rad(45))
+        self.dq_v = self.qv(qw=3)
+        self.v_ref = 0 # horizontal velocity
+        self.p_ref = self.qh_v() # knee angle
+        self.x0_v = 0
+        self.v_uk = 0
+        self.v_uw = 0
+
         qh = self.qh()
         vmodel_g, a0 = self.virtual_wip_model_ground()
         #reuse = False
@@ -56,8 +66,8 @@ class WIPG(LinkTreeModel):
             # qh 45 : [[-1.         13.53793325 55.79660305]]
             # qh -45 : [[-1.          7.98246651 39.40143798]]
         else:
-            self.K = wip_gain(vmodel_g, context | {qh:0})
-            #self.K = wip_gain(vmodel_g, context | {qh:np.deg2rad(45)})
+            #self.K = wip_gain(vmodel_g, context | {qh:0})
+            self.K = wip_gain(vmodel_g, context | {qh:self.qh_v()})
             #self.K = wip_gain(vmodel_g, context | {qh:np.deg2rad(-45)})
         ## [lh*mh*(-(dql+dqw)**2*ll*cos(qh) + g*cos(qh + ql + qw))]])
         self.cancel_force_knee = self.cancel_bias_force_knee()
@@ -66,12 +76,6 @@ class WIPG(LinkTreeModel):
         self.ddqf_g = self.gen_ddq_f(self.sim_input(), context)
         self.draw_g_cmds = self.gen_draw_cmds(self.draw_input(), context)
 
-        # initial status
-        self.q_v = self.qv()
-        self.dq_v = self.qv(qw=3)
-        self.v_ref = 0 # horizontal velocity
-        self.p_ref = 0 # knee angle
-        self.x0_v = 0
 
     def sim_input(self):
         return [uw, uk, x0]
@@ -109,6 +113,12 @@ class WIPG(LinkTreeModel):
     def qh(self):
         return self.q()[self.IDX_H]
 
+    def ref_v(self):
+        return np.array([self.v_ref, self.p_ref])
+
+    def tau_v(self):
+        return np.array([self.v_uw, self.v_uk])
+
     def virtual_wip_model_ground(self):
         vI = simplify(self.Ic[self.IDX_L]) # stick inertia
         vm, cx, cy, _ = I2mc(vI)
@@ -131,11 +141,11 @@ class WIPG(LinkTreeModel):
         Kd = 100
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
-        v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
-        v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
-        #v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-        #v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
-        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, dt, [v_uw, v_uk, self.x0_v])
+        self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
+        self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
+        #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
+        #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
+        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, dt, [self.v_uw, self.v_uk, self.x0_v])
 
 def test():
     model_g = WIPG()
@@ -181,6 +191,8 @@ def test():
         viewer.text([ f"t: {t:.03f}"
                     , graphic.arr2txt(model_g.q_v, " q")
                     , graphic.arr2txt(model_g.dq_v, "dq")
+                    , graphic.arr2txt(model_g.ref_v(), "ref")
+                    , graphic.arr2txt(model_g.tau_v(), "tau")
                     ])
         viewer.draw(cmds)
         viewer.draw_horizon(0)
