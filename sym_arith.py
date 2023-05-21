@@ -8,8 +8,9 @@ import sys
 #-------------------------
 
 def printM(M, name="M"):
-    for i in range(3):
-        for j in range(3):
+    r,c = shape(M)
+    for i in range(r):
+        for j in range(c):
             print(f"{name}[{i}:{j}] {M[i,j]}")
 
 # scalar product: *
