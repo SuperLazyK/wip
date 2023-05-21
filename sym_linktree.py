@@ -193,15 +193,11 @@ class LinkTreeModel:
         C = self.counter_joint_force(fext)
         syms = q_sym_list +  dq_sym_list + input_sym_list
         Hevalf = lambdify(syms, self.H.subs(ctx))
-        rhs1 = lambdify(syms, (tau).subs(ctx))
-        rhs2 = lambdify(syms, (C).subs(ctx))
+        rhs = lambdify(syms, (tau-C).subs(ctx))
         def ddq_f(qv, dqv, uv):
-            b1 = rhs1(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
-            b2 = rhs2(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
+            b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
             A = Hevalf(*qv, *dqv, *uv)
-            print("tau", b1)
-            print("bas", b2)
-            return np.linalg.solve(A, b1-b2)
+            return np.linalg.solve(A, b)
         return ddq_f
 
     def calc_cog(self, ith=0): # global coordinate

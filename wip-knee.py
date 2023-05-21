@@ -24,7 +24,7 @@ g = symbols('g')
 context = { mw: 1, Iw: 1./200, r: 0.1,
             ml: 1, Il: 0.09/12, ll: 0.3,
             mh: 8, Ih: 8*0.09/12, lh: 0.3,
-            k:200,
+            k:0,
             g: 9.81
         }
 
@@ -134,7 +134,6 @@ class WIPG(LinkTreeModel):
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
         self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
-        print("cancel by torq", self.cancel_force_knee(*self.q_v, *self.dq_v))
         self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
