@@ -154,7 +154,7 @@ class JointLink():
         return 0
 
     def passive_joint_force(self):
-        return Matrix([0, 0, 0])
+        return 0
 
     def kinetic_energy(self):
         return (1/2 * self.vel.T * self.I * self.vel)[0,0]
@@ -206,8 +206,11 @@ class StickSpringJointLink(StickJointLink):
         self.k = k
         self.q0 = q0
 
+    # NOTE: can be described with fext to 2 links
+    # fext[i][0] = +k * qh
+    # fext[i+1][0] = -k * qh
     def passive_joint_force(self):
-        return - self.k * (self.q - self.q0) * self.S()
+        return - self.k * (self.q - self.q0)
 
 class WheelJointLink(JointLink):
     def __init__(self, name, m, r, joint, q=None, dq=None, ddq=None, Icog=None, XT=None, tau=0):

@@ -42,13 +42,14 @@ class WIPG(LinkTreeModel):
         jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
+        #jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         jl3 = StickSpringJointLink("qh", mh, lh, k, 0, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
 
         # initial status
-        self.q_v = self.qv(qh=np.deg2rad(0))
-        #self.q_v = self.qv(qh=np.deg2rad(45))
+        #self.q_v = self.qv(qh=np.deg2rad(0))
+        self.q_v = self.qv(qh=np.deg2rad(45))
         self.dq_v = self.qv(qw=3)
         self.v_ref = 0 # horizontal velocity
         self.p_ref = self.qh_v() # knee angle
@@ -61,10 +62,11 @@ class WIPG(LinkTreeModel):
         self.Af = lambdify([qh], A.subs(context))
         self.Bf = lambdify([qh], B.subs(context))
         self.a0f = lambdify([qh], a0.subs(context))
-        self.cancel_force_knee = self.cancel_bias_force_knee()
+        fext = [zeros(self.dim, 1) for i in range(self.NB)]
+        self.cancel_force_knee = self.cancel_bias_force_knee(fext)
         self.update_gain()
 
-        self.ddqf_g = self.gen_ddq_f(self.sim_input(), context)
+        self.ddqf_g = self.gen_ddq_f(self.sim_input(), context, fext)
         self.draw_g_cmds = self.gen_draw_cmds(self.draw_input(), context)
 
     def update_gain(self):
@@ -120,8 +122,8 @@ class WIPG(LinkTreeModel):
         A, B = wip_lin_system(g, r, vl, mw, vmb, Iw, vIb)
         return A, B, vtheta
 
-    def cancel_bias_force_knee(self):
-        return lambdify(self.q() + self.dq(), simplify(self.counter_joint_force()[self.IDX_H,0]).subs(context))
+    def cancel_bias_force_knee(self, fext):
+        return lambdify(self.q() + self.dq(), simplify(self.counter_joint_force(fext)[self.IDX_H,0]).subs(context))
 
     def draw(self):
         return self.draw_g_cmds(self.q_v, self.dq_v, [self.x0_v])
@@ -132,6 +134,7 @@ class WIPG(LinkTreeModel):
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
         self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
+        print("cancel by torq", self.cancel_force_knee(*self.q_v, *self.dq_v))
         self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)

@@ -110,20 +110,23 @@ class LinkTreeModel:
             acc[i] = X_j_to_i * accj  + S[i] * ddq[i] + cJ + crm(vel) * vJ
 
             f_g = self.jointlinks[i].gravity_force(self.g)
-            f_p = self.jointlinks[i].passive_joint_force()
             # Euler's body coordinate dynamics equation
             # Inertia and angular velocity always changes in reference cordinate!!
             # NOTE w, I, M(tora) are descirbed in body coordinate
             # M = I dw/dt + w x (Iw)
-            # f[i] is interaction force between links here
+            # f[i] is interaction force to i "from its parent j"
+            # passive joint force is eliminated
             if impulse:
                 f[i] = - dualm(self.jointlinks[i].X_r_to) * fext[i]
             else:
-                f[i] = I * acc[i] + crf(vel) * I * vel - dualm(self.jointlinks[i].X_r_to) * fext[i] - f_g - f_p
+                f[i] = I * acc[i] + crf(vel) * I * vel - dualm(self.jointlinks[i].X_r_to) * fext[i] - f_g
 
         for i in range(NB-1, -1, -1):
             # parent force projeced to S(non-constraint-dimension)
-            tau[i] = S[i].dot(f[i])
+            if impulse:
+                tau[i] = S[i].dot(f[i])
+            else:
+                tau[i] = S[i].dot(f[i]) - self.jointlinks[i].passive_joint_force()
             j = self.parent(i)
             if j != -1: # parent is root
                 X_j_to_i = self.X_parent_to[i]
@@ -190,11 +193,15 @@ class LinkTreeModel:
         C = self.counter_joint_force(fext)
         syms = q_sym_list +  dq_sym_list + input_sym_list
         Hevalf = lambdify(syms, self.H.subs(ctx))
-        rhs = lambdify(syms, (tau - C).subs(ctx))
+        rhs1 = lambdify(syms, (tau).subs(ctx))
+        rhs2 = lambdify(syms, (C).subs(ctx))
         def ddq_f(qv, dqv, uv):
-            b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
+            b1 = rhs1(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
+            b2 = rhs2(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
             A = Hevalf(*qv, *dqv, *uv)
-            return np.linalg.solve(A, b)
+            print("tau", b1)
+            print("bas", b2)
+            return np.linalg.solve(A, b1-b2)
         return ddq_f
 
     def calc_cog(self, ith=0): # global coordinate
