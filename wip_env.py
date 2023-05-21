@@ -8,7 +8,8 @@ def gen_friction_impulse(model_a, fx, r, context):
     [dq1, dq2, dq3, dq4] = model_a.dq()
     [ddq1, ddq2, ddq3, ddq4] = model_a.ddq()
     fext = [zeros(3,1) for i in range(4)]
-    fext[2][0] = - fx * (q2 - r) # global coordinate torq!! but q2 == r
+    #fext[2][0] = - fx * (q2 - r) # global coordinate torq!! but q2 == 0
+    fext[2][0] = - fx * ( - r) # global coordinate torq!! but q2 == 0
     fext[2][1] = fx
     syms = model_a.q() + model_a.dq()
     Cfric = diff(model_a.inverse_dynamics([0 for i in range(model_a.NB)], fext, impulse=True).subs(context), fx)
