@@ -52,8 +52,13 @@ class WIPG(LinkTreeModel):
         reuse = True
         if reuse:
             self.K = np.array([[-1., 11.20462078, 50.02801177]])
+            # qh 0 : [[-1.         11.20462078 50.02801177]]
+            # qh 45 : [[-1.         13.53793325 55.79660305]]
+            # qh -45 : [[-1.          7.98246651 39.40143798]]
         else:
             self.K = wip_gain(vmodel_g, context | {qh:0})
+            #self.K = wip_gain(vmodel_g, context | {qh:np.deg2rad(45)})
+            #self.K = wip_gain(vmodel_g, context | {qh:np.deg2rad(-45)})
         ## [lh*mh*(-(dql+dqw)**2*ll*cos(qh) + g*cos(qh + ql + qw))]])
         self.cancel_force_knee = self.cancel_bias_force_knee()
         self.a0f = lambdify([qh], a0.subs(context))
@@ -127,9 +132,9 @@ class WIPG(LinkTreeModel):
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
         v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
-        v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(0))
-        v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-        v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
+        v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
+        #v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
+        #v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
         self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, dt, [v_uw, v_uk, self.x0_v])
 
 def test():
@@ -155,6 +160,15 @@ def test():
             model_g.v_ref = -5
         elif key == 'j':
             model_g.v_ref = 0
+        elif key == 'p':
+            model_g.p_ref = np.deg2rad(45)
+            model_g.K = np.array([[-1., 13.53793325, 55.79660305]])
+        elif key == 'n':
+            model_g.p_ref = np.deg2rad(-45)
+            model_g.K = np.array([[-1., 7.98246651, 39.40143798]])
+        elif key == 'k':
+            model_g.p_ref = 0
+            model_g.K = np.array([[-1., 11.20462078, 50.02801177]])
 
     while True:
         if in_air:
