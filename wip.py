@@ -31,8 +31,9 @@ context = { l: 0.5, r: 0.05,
 # NOTE normal force is ignored due to constraint
 def sym_models_ground():
     # initial wheel angle should be vertical
-    jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2+a0, 0, 0), Icog=Iw)
-    jl2 = StickJointLink("qs", mb, l, RevoluteJoint(), cx=l, Icog=Ib, tau=u)
+    jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
+    I = transInertia(mcI(mb, [l, 0], Ib), Xpln(a0, 0, 0))
+    jl2 = StickJointLink("qs", mb, l, RevoluteJoint(), I=I, tau=u)
     #jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
     #jl2 = StickJointLink("qs", mb, l, RevoluteJoint(), cx=l, I=transInertia(mcI(mb, [l,0], Ib), Xpln(a0, 0,0)), tau=u)
     plant_model = LinkTreeModel([jl1, jl2], g)
@@ -43,8 +44,9 @@ def sym_models_ground():
 def sym_models_air():
     jl1 = StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(pi/2, 0, 0)) # fict
     jl2 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(0, 0, 0))    # fict
-    jl3 = WheelJointLink("qw", mw, r, RevoluteJoint(), XT=Xpln(a0, 0, 0), Icog=Iw)
-    jl4 = StickJointLink("qs", mb, l, RevoluteJoint(), cx=l, Icog=Ib, tau=u)
+    jl3 = WheelJointLink("qw", mw, r, RevoluteJoint(), XT=Xpln(0, 0, 0), Icog=Iw)
+    I = transInertia(mcI(mb, [l, 0], Ib), Xpln(a0, 0, 0))
+    jl4 = StickJointLink("qs", mb, l, RevoluteJoint(), I=I, tau=u)
     plant_model = LinkTreeModel([jl1, jl2, jl3, jl4], g)
     return plant_model
 
@@ -62,7 +64,8 @@ def test():
     if reuse: # K is independent of a0
         K = np.array([[-1, 41.26540066, 125.12381105]])
     else:
-        K = wip_gain(model_g, context, a0, a0v)
+        A, B = linealize(model_g, a0)
+        K = wip_gain(context, A, B)
 
     friction_impulse = gen_friction_impulse(model_a, fx, r, context | {a0:a0v})
 
