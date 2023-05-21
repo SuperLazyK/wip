@@ -28,56 +28,112 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
             g: 9.81
         }
 
-# NOTE normal force is ignored due to constraint
-def sym_models_ground():
-    # initial wheel angle should be vertical
-    jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
-    jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
-    jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
-    jl3 = StickSpringJointLink("qh", mh, lh, k, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-    plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+class WIPG(LinkTreeModel):
 
-    plant_model = LinkTreeModel([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
-    #plant_model.joint_info()
-    return plant_model
+    IDX_W=0
+    IDX_L=1
+    IDX_H=2
 
-
-def virtual_wip_model_ground(model):
-    vI = simplify(model.Ic[1])
-    vm, cx, cy, _ = I2mc(vI)
-    vl = simplify(sqrt(cx**2+cy**2))
-    vtheta = atan2(cy, cx)
-    X = Xpln(-vtheta, 0, 0)
-    jl1 = WheelJointLink("vqw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
-    jl2 = StickJointLink("vqs", vm, vl, RevoluteJoint(), cx=vl, I=transInertia(vI, X), tau=uw)
-    vwip_model = LinkTreeModel([jl1, jl2], g)
-    return vwip_model, vtheta
-
-
-def test():
-    model_g = sym_models_ground()
-    max_torq_w = 3.5 # Nm
-    max_torq_k = 40 # Nm
     max_knee_angle = np.deg2rad(-150)
     min_knee_angle = np.deg2rad(-45)
-    qh = model_g.q()[2]
-    vmodel_g, a0 = virtual_wip_model_ground(model_g)
-    # [lh*mh*(-(dql+dqw)**2*ll*cos(qh) + g*cos(qh + ql + qw))]])
-    cancel_bias_force = lambdify(model_g.q() + model_g.dq(), simplify(model_g.counter_joint_force()[2,0]).subs(context))
-    a0f = lambdify([qh], a0.subs(context))
-    reuse = True
-    if reuse:
-        K = np.array([[-1., 11.20462078, 50.02801177]])
-    else:
-        K = wip_gain(vmodel_g, context | {qh:0})
 
-    ddqf_g = model_g.gen_ddq_f([uw, uk, x0], context)
-    draw_g_cmds = model_g.gen_draw_cmds([x0], context)
+    def __init__(self):
+        # initial wheel angle should be vertical
+        jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
+        jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
+        jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
+        jl3 = StickSpringJointLink("qh", mh, lh, k, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
+        #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+        super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
 
-    q_v = np.array([0, 0, 0], dtype=np.float64)
-    dq_v = np.array([3, 0, 0], dtype=np.float64)
-    #q_v = np.array([0, 0], dtype=np.float64)
-    #dq_v = np.array([0, 0], dtype=np.float64)
+        qh = self.qh()
+        vmodel_g, a0 = self.virtual_wip_model_ground()
+        #reuse = False
+        reuse = True
+        if reuse:
+            self.K = np.array([[-1., 11.20462078, 50.02801177]])
+        else:
+            self.K = wip_gain(vmodel_g, context | {qh:0})
+        ## [lh*mh*(-(dql+dqw)**2*ll*cos(qh) + g*cos(qh + ql + qw))]])
+        self.cancel_force_knee = self.cancel_bias_force_knee()
+        self.a0f = lambdify([qh], a0.subs(context))
+
+        self.ddqf_g = self.gen_ddq_f(self.sim_input(), context)
+        self.draw_g_cmds = self.gen_draw_cmds(self.draw_input(), context)
+
+        # initial status
+        self.q_v = self.qv()
+        self.dq_v = self.qv(qw=3)
+        self.v_ref = 0 # horizontal velocity
+        self.p_ref = 0 # knee angle
+        self.x0_v = 0
+
+    def sim_input(self):
+        return [uw, uk, x0]
+
+    def draw_input(self):
+        return [x0]
+
+    def qv(self, qw=0, ql=0, qh=0):
+        return np.array([qw, ql, qh], dtype=np.float64)
+
+    def qw_v(self):
+        return self.q_v[self.IDX_W]
+
+    def ql_v(self):
+        return self.q_v[self.IDX_L]
+
+    def qh_v(self):
+        return self.q_v[self.IDX_H]
+
+    def dqw_v(self):
+        return self.dq_v[self.IDX_W]
+
+    def dql_v(self):
+        return self.dq_v[self.IDX_L]
+
+    def dqh_v(self):
+        return self.dq_v[self.IDX_H]
+
+    def qw(self):
+        return self.q()[self.IDX_W]
+
+    def ql(self):
+        return self.q()[self.IDX_L]
+
+    def qh(self):
+        return self.q()[self.IDX_H]
+
+    def virtual_wip_model_ground(self):
+        vI = simplify(self.Ic[self.IDX_L]) # stick inertia
+        vm, cx, cy, _ = I2mc(vI)
+        vl = simplify(sqrt(cx**2+cy**2))
+        vtheta = atan2(cy, cx)
+        X = Xpln(-vtheta, 0, 0)
+        jl1 = WheelJointLink("vqw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
+        jl2 = StickJointLink("vqs", vm, vl, RevoluteJoint(), cx=vl, I=transInertia(vI, X), tau=uw)
+        vwip_model = LinkTreeModel([jl1, jl2], g)
+        return vwip_model, vtheta
+
+    def cancel_bias_force_knee(self):
+        return lambdify(self.q() + self.dq(), simplify(self.counter_joint_force()[self.IDX_H,0]).subs(context))
+
+    def draw(self):
+        return self.draw_g_cmds(self.q_v, self.dq_v, [self.x0_v])
+
+    def step(self, dt):
+        Kp = 1000
+        Kd = 100
+        max_torq_w = 3.5 # Nm
+        max_torq_k = 40 # Nm
+        v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
+        v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(0))
+        v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
+        v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
+        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, dt, [v_uw, v_uk, self.x0_v])
+
+def test():
+    model_g = WIPG()
 
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
@@ -86,39 +142,31 @@ def test():
     dt = 0.001
     in_air = False
 
-    v_ref = 0 # horizontal velocity
-    p_ref = 0 # knee angle
-
-    v_uw = 0
-    v_uk = 0
-    x0_v = 0
-
     pause = True
     def event_handler(key, shifted):
-        nonlocal v_ref, pause
+        nonlocal pause
         if key == 'q':
             sys.exit()
         elif key == 's':
             pause = pause ^ True
         elif key == 'l':
-            v_ref = 5
+            model_g.v_ref = 5
         elif key == 'h':
-            v_ref = -5
+            model_g.v_ref = -5
         elif key == 'j':
-            v_ref = 0
+            model_g.v_ref = 0
 
     while True:
         if in_air:
             pass
         else:
-            cmds = draw_g_cmds(q_v, dq_v, [x0_v])
+            cmds = model_g.draw()
 
         viewer.handle_event(event_handler)
         viewer.clear()
         viewer.text([ f"t: {t:.03f}"
-                    , f"q: {q_v[0]:.03f} {q_v[1]:.03f}  {q_v[2]:.03f}"
-                    , f"dq: {dq_v[0]:.03f} {dq_v[1]:.03f}  {dq_v[2]:.03f}"
-                    , f"tau: N/A {v_uw:.01f} {v_uk:.01f})"
+                    , graphic.arr2txt(model_g.q_v, " q")
+                    , graphic.arr2txt(model_g.dq_v, "dq")
                     ])
         viewer.draw(cmds)
         viewer.draw_horizon(0)
@@ -132,13 +180,7 @@ def test():
         if in_air:
             pass
         else:
-            Kp = 1000
-            Kd = 100
-            v_uk = Kp*(p_ref - q_v[2]) - Kd * dq_v[2] + cancel_bias_force(*q_v, *dq_v)
-            v_uw = wip_wheel_torq(K, v_ref, q_v, dq_v, a0f(0))
-            v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-            v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
-            q_v, dq_v = euler_step(ddqf_g, q_v, dq_v, dt, [v_uw, v_uk, x0_v])
+            model_g.step(dt)
 
 if __name__ == '__main__':
     test()
