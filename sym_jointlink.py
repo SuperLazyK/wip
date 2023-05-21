@@ -198,12 +198,13 @@ class StickJointLink(JointLink):
         return self.tau
 
 class StickSpringJointLink(StickJointLink):
-    def __init__(self, name, m, l, k, joint, q=None, dq=None, ddq=None, cx=None, Icog=None, I=None, XT=None, tau=0):
+    def __init__(self, name, m, l, k, q0, joint, q=None, dq=None, ddq=None, cx=None, Icog=None, I=None, XT=None, tau=0):
         super().__init__(name, m, l, joint, q, dq, ddq, cx, Icog, I, XT, tau)
         self.k = k
+        self.q0 = q0
 
     def joint_force(self):
-        return self.tau - self.k * self.q
+        return self.tau - self.k * (self.q - self.q0)
 
 class WheelJointLink(JointLink):
     def __init__(self, name, m, r, joint, q=None, dq=None, ddq=None, Icog=None, XT=None, tau=0):
