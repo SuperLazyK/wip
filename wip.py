@@ -48,15 +48,6 @@ def sym_models_air():
     plant_model = LinkTreeModel([jl1, jl2, jl3, jl4], g)
     return plant_model
 
-def q2phith(q):
-    return [-q[1], q[0] + q[1]]
-
-def phith2q(phi_th):
-    q1 = phi_th[0] + phi_th[1]
-    q2 = -phi_th[0]
-    return np.array([q1, q2])
-
-
 def test():
     a0v = np.pi/8
     model_g = sym_models_ground()

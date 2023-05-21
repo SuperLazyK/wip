@@ -57,14 +57,10 @@ def wip_gain(model, context, a=symbols('a'), av=0, Q=np.diag([1,1,1]), R=1):
 
     return K
 
-def q2phith(q, a):
+def wip_wheel_torq(K, ref_v, q, dq, a=0):
     # phi:q2
     # th:q2+q1 + a
     # NOTE: dth:q2+q1
-    return [q[1], q[0] + q[1] + a]
-
-
-def wip_wheel_torq(K, ref_v, q, dq, a=0):
     phi, th = q[1], q[0] + q[1] + a
     dphi, dth = dq[1], dq[0] + dq[1]
     ret = K @ np.array([ref_v - dphi, 0 - dth, 0 - th])
