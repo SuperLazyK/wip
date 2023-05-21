@@ -150,8 +150,11 @@ class JointLink():
     def gen_draw_cmds(self, sym_list, ctx):
         return []
 
-    def joint_force(self):
+    def active_joint_force(self):
         return 0
+
+    def passive_joint_force(self):
+        return Matrix([0, 0, 0])
 
     def kinetic_energy(self):
         return (1/2 * self.vel.T * self.I * self.vel)[0,0]
@@ -194,7 +197,7 @@ class StickJointLink(JointLink):
             return draw_lineseg_cmd(X, l, name=self.name) + draw_circle_cmd(X, 0.01, name=self.name)
         return draw_cmd
 
-    def joint_force(self):
+    def active_joint_force(self):
         return self.tau
 
 class StickSpringJointLink(StickJointLink):
@@ -203,8 +206,8 @@ class StickSpringJointLink(StickJointLink):
         self.k = k
         self.q0 = q0
 
-    def joint_force(self):
-        return self.tau - self.k * (self.q - self.q0)
+    def passive_joint_force(self):
+        return - self.k * (self.q - self.q0) * self.S()
 
 class WheelJointLink(JointLink):
     def __init__(self, name, m, r, joint, q=None, dq=None, ddq=None, Icog=None, XT=None, tau=0):
@@ -217,7 +220,7 @@ class WheelJointLink(JointLink):
         self.tau = tau
         self.r = r
 
-    def joint_force(self):
+    def active_joint_force(self):
         return self.tau
 
     def gen_draw_cmds(self, sym_list, ctx):

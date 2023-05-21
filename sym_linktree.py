@@ -110,7 +110,7 @@ class LinkTreeModel:
             acc[i] = X_j_to_i * accj  + S[i] * ddq[i] + cJ + crm(vel) * vJ
 
             f_g = self.jointlinks[i].gravity_force(self.g)
-
+            f_p = self.jointlinks[i].passive_joint_force()
             # Euler's body coordinate dynamics equation
             # Inertia and angular velocity always changes in reference cordinate!!
             # NOTE w, I, M(tora) are descirbed in body coordinate
@@ -119,7 +119,7 @@ class LinkTreeModel:
             if impulse:
                 f[i] = - dualm(self.jointlinks[i].X_r_to) * fext[i]
             else:
-                f[i] = I * acc[i] + crf(vel) * I * vel - dualm(self.jointlinks[i].X_r_to) * fext[i] - f_g
+                f[i] = I * acc[i] + crf(vel) * I * vel - dualm(self.jointlinks[i].X_r_to) * fext[i] - f_g - f_p
 
         for i in range(NB-1, -1, -1):
             # parent force projeced to S(non-constraint-dimension)
@@ -185,7 +185,7 @@ class LinkTreeModel:
     def gen_ddq_f(self, input_sym_list=[], ctx={}, fext=None):
         q_sym_list = self.q()
         dq_sym_list = self.dq()
-        tau = Matrix([jl.joint_force() for jl in self.jointlinks])
+        tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
         C = self.counter_joint_force(fext)
         syms = q_sym_list +  dq_sym_list + input_sym_list

@@ -42,7 +42,7 @@ class WIPG(LinkTreeModel):
         jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
-        jl3 = StickSpringJointLink("qh", mh, lh, k, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
+        jl3 = StickSpringJointLink("qh", mh, lh, k, 0, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
 
