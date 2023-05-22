@@ -51,12 +51,12 @@ class WIPG(LinkTreeModel):
         #self.q_v = self.qv(qh=np.deg2rad(0))
         self.q_v = self.qv(qh=np.deg2rad(45))
         self.dq_v = self.qv(qw=3)
+        self.v_fext =np.zeros((self.NB, 3))
         self.v_ref = 0 # horizontal velocity
         self.p_ref = self.qh_v() # knee angle
         self.x0_v = 0
         self.v_uk = 0
         self.v_uw = 0
-        self.v_fext =[[0, 0, 0] for i in range(self.NB)]
 
         qh = self.qh()
         A, B, a0 = self.virtual_wip_model_ground()
@@ -133,7 +133,7 @@ class WIPG(LinkTreeModel):
         Kd = 100
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
-        self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v, *sum(self.v_fext, []))
+        self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v, *self.v_fext.reshape(-1))
         self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
