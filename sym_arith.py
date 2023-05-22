@@ -122,6 +122,12 @@ def crf(v):
 def transInertia(I, X):
     return X.T * I * X
 
+# force vector for fx,fy at x y on link at X
+def point_force(X, x, y, fx, fy):
+    _, _, x0, y0 = Xtoscxy(X)
+    tau = fy * (x-x0) - fx * (y - y0)
+    return Matrix([tau, fx, fy]) 
+
 
 if __name__ == '__main__':
     q1, x1, y1 = symbols('q1 x1 y1')
