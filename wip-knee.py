@@ -163,13 +163,13 @@ def test():
             model_g.v_ref = 0
         elif key == 'p':
             model_g.p_ref = np.deg2rad(45)
-            model_g.K = np.array([[-1., 13.53793325, 55.79660305]])
+            model_g.update_gain()
         elif key == 'n':
             model_g.p_ref = np.deg2rad(-45)
-            model_g.K = np.array([[-1., 7.98246651, 39.40143798]])
+            model_g.update_gain()
         elif key == 'k':
             model_g.p_ref = 0
-            model_g.K = np.array([[-1., 11.20462078, 50.02801177]])
+            model_g.update_gain()
 
     while True:
         if in_air:
