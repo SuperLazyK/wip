@@ -29,10 +29,6 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
 
 class WIPG(LinkTreeModel):
 
-    IDX_W=0
-    IDX_L=1
-    IDX_H=2
-
     max_knee_angle = np.deg2rad(-150)
     min_knee_angle = np.deg2rad(-45)
 
@@ -44,12 +40,24 @@ class WIPG(LinkTreeModel):
         #jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         jl3 = StickSpringJointLink("qh", mh, lh, k, 0, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
-        super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+        virtual = False
+        if virtual:
+            self.IDX_Y=0
+            self.IDX_W=1
+            self.IDX_L=2
+            self.IDX_H=3
+            super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+            self.q_v = np.array([0, 0, 0, np.deg2rad(45)])
+            self.dq_v = np.array([0, 3, 0, 0])
+        else:
+            self.IDX_W=0
+            self.IDX_L=1
+            self.IDX_H=2
+            super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+            self.q_v = np.array([0, 0, np.deg2rad(45)])
+            self.dq_v = np.array([3, 0, np.deg2rad(45)])
 
         # initial status
-        #self.q_v = self.qv(qh=np.deg2rad(0))
-        self.q_v = self.qv(qh=np.deg2rad(45))
-        self.dq_v = self.qv(qw=3)
         self.v_fext =np.zeros((self.NB, 3))
         self.v_ref = 0 # horizontal velocity
         self.p_ref = self.qh_v() # knee angle
@@ -77,8 +85,6 @@ class WIPG(LinkTreeModel):
     def draw_input(self):
         return [x0]
 
-    def qv(self, qw=0, ql=0, qh=0):
-        return np.array([qw, ql, qh], dtype=np.float64)
 
     def qw_v(self):
         return self.q_v[self.IDX_W]
@@ -136,6 +142,8 @@ class WIPG(LinkTreeModel):
         self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
+        print("q", self.q_v)
+        print("dq", self.dq_v)
         self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, self.v_fext, dt, [self.v_uw, self.v_uk, self.x0_v])
 
 def test():
