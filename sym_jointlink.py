@@ -117,7 +117,7 @@ class JointLink():
     # XT: base frame to attachment point to the child
     # the next joint is attached at XT on the current body coordinate
     # dim == 1 because 2-dim joint can decomposed into 2 joints
-    def __init__(self, name, I, m, XT, q, dq, ddq, joint):
+    def __init__(self, name, I, m, XT, joint):
         self.name = name
         self.joint = joint
         self.X_r_to = zeros(3, 3)
@@ -125,14 +125,12 @@ class JointLink():
         self.I = I # Inertia tensor on body coordinate
         self.m = m
         self.XT = XT
-        if q is None:
-            self.q = symbols(name)
-            self.dq = symbols("d"+name)
-            self.ddq = symbols("dd"+name)
-        else:
-            self.q = q
-            self.dq = dq
-            self.ddq = ddq
+        self.q = symbols(name)
+        self.dq = symbols("d"+name)
+        self.ddq = symbols("dd"+name)
+        self.fa = symbols("f"+name+"a")
+        self.fx = symbols("f"+name+"x")
+        self.fy = symbols("f"+name+"y")
 
     # XJ: attachment point from the parent to base frame of the body
     def XJ(self):
@@ -174,7 +172,7 @@ class JointLink():
 
 
 class StickJointLink(JointLink):
-    def __init__(self, name, m, l, joint, q=None, dq=None, ddq=None, cx=None, Icog=None, I=None, XT=None, tau=0):
+    def __init__(self, name, m, l, joint, cx=None, Icog=None, I=None, XT=None, tau=0):
         if I is None:
             if Icog is None:
                 Icog = stickI(m,l)
@@ -184,7 +182,7 @@ class StickJointLink(JointLink):
                 I = mcI(m, [cx, 0], Icog)
         if XT is None:
             XT = Xpln(0, l, 0)
-        super().__init__(name, I, m, XT, q, dq, ddq, joint)
+        super().__init__(name, I, m, XT, joint)
         self.tau = tau
         self.l = l
 
@@ -201,8 +199,8 @@ class StickJointLink(JointLink):
         return self.tau
 
 class StickSpringJointLink(StickJointLink):
-    def __init__(self, name, m, l, k, q0, joint, q=None, dq=None, ddq=None, cx=None, Icog=None, I=None, XT=None, tau=0):
-        super().__init__(name, m, l, joint, q, dq, ddq, cx, Icog, I, XT, tau)
+    def __init__(self, name, m, l, k, q0, joint, cx=None, Icog=None, I=None, XT=None, tau=0):
+        super().__init__(name, m, l, joint, cx, Icog, I, XT, tau)
         self.k = k
         self.q0 = q0
 
@@ -213,13 +211,13 @@ class StickSpringJointLink(StickJointLink):
         return - self.k * (self.q - self.q0)
 
 class WheelJointLink(JointLink):
-    def __init__(self, name, m, r, joint, q=None, dq=None, ddq=None, Icog=None, XT=None, tau=0):
+    def __init__(self, name, m, r, joint, Icog=None, XT=None, tau=0):
         if Icog is None:
             Icog = circleI(m,r)
         I = mcI(m, [0, 0], Icog)
         if XT is None:
             XT = Xpln(0, 0, 0)
-        super().__init__(name, I, m, XT, q, dq, ddq, joint)
+        super().__init__(name, I, m, XT, joint)
         self.tau = tau
         self.r = r
 

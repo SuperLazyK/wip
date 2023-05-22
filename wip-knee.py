@@ -56,17 +56,17 @@ class WIPG(LinkTreeModel):
         self.x0_v = 0
         self.v_uk = 0
         self.v_uw = 0
+        self.v_fext =[[0, 0, 0] for i in range(self.NB)]
 
         qh = self.qh()
         A, B, a0 = self.virtual_wip_model_ground()
         self.Af = lambdify([qh], A.subs(context))
         self.Bf = lambdify([qh], B.subs(context))
         self.a0f = lambdify([qh], a0.subs(context))
-        fext = [zeros(self.dim, 1) for i in range(self.NB)]
-        self.cancel_force_knee = self.cancel_bias_force_knee(fext)
+        self.cancel_force_knee = self.cancel_bias_force_knee()
         self.update_gain()
 
-        self.ddqf_g = self.gen_ddq_f(self.sim_input(), context, fext)
+        self.ddqf_g = self.gen_ddq_f(self.sim_input(), context)
         self.draw_g_cmds = self.gen_draw_cmds(self.draw_input(), context)
 
     def update_gain(self):
@@ -122,8 +122,8 @@ class WIPG(LinkTreeModel):
         A, B = wip_lin_system(g, r, vl, mw, vmb, Iw, vIb)
         return A, B, vtheta
 
-    def cancel_bias_force_knee(self, fext):
-        return lambdify(self.q() + self.dq(), simplify(self.counter_joint_force(fext)[self.IDX_H,0]).subs(context))
+    def cancel_bias_force_knee(self):
+        return lambdify(self.syms(), simplify(self.counter_joint_force()[self.IDX_H,0]).subs(context))
 
     def draw(self):
         return self.draw_g_cmds(self.q_v, self.dq_v, [self.x0_v])
@@ -133,11 +133,11 @@ class WIPG(LinkTreeModel):
         Kd = 100
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
-        self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v)
+        self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v, *sum(self.v_fext, []))
         self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
-        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, dt, [self.v_uw, self.v_uk, self.x0_v])
+        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, self.v_fext, dt, [self.v_uw, self.v_uk, self.x0_v])
 
 def test():
     model_g = WIPG()

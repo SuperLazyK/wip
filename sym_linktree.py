@@ -73,6 +73,12 @@ class LinkTreeModel:
     def ddq(self):
         return [jl.ddq for jl in self.jointlinks]
 
+    def fext(self):
+        return sum([[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks],[])
+
+    def syms(self, others=[]):
+        return self.q() +  self.dq() + self.fext() + others
+
     def parent(self, i):
         return self.parent_idx[i]
 
@@ -178,25 +184,23 @@ class LinkTreeModel:
         return sum([jl.potential_energy(self.g) for jl in self.jointlinks])
 
     # joint force to keep the attitude
-    def counter_joint_force(self, fext=None):
-        if fext is None:
-            fext = [zeros(self.dim, 1) for i in range(self.NB)]
+    def counter_joint_force(self):
+        fext = [Matrix([jl.fa, jl.fx, jl.fy]) for jl in self.jointlinks]
         C = self.inverse_dynamics([0 for i in range(self.NB)], fext)
         return C
 
     # foward dynqmics
-    def gen_ddq_f(self, input_sym_list=[], ctx={}, fext=None):
-        q_sym_list = self.q()
-        dq_sym_list = self.dq()
+    def gen_ddq_f(self, input_sym_list=[], ctx={}):
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
-        C = self.counter_joint_force(fext)
-        syms = q_sym_list +  dq_sym_list + input_sym_list
+        C = self.counter_joint_force()
+        fext = [[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks]
+        syms = self.syms(input_sym_list)
         Hevalf = lambdify(syms, self.H.subs(ctx))
         rhs = lambdify(syms, (tau-C).subs(ctx))
-        def ddq_f(qv, dqv, uv):
-            b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
-            A = Hevalf(*qv, *dqv, *uv)
+        def ddq_f(qv, dqv, fextv, uv):
+            b = rhs(*qv, *dqv, *sum([fv for fv in fextv], []), *uv).reshape(-1).astype(np.float64)
+            A = Hevalf(*qv, *dqv, *sum([fv for fv in fextv], []), *uv)
             return np.linalg.solve(A, b)
         return ddq_f
 
