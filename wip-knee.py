@@ -15,7 +15,6 @@ from wip_control import *
 # https://www2.akita-nct.ac.jp/libra/report/46/46038.pdf
 
 r,ll,lh,Iw,Il,Ih,mw,ml,mh = symbols('r ll lh Iw Il Ih mw ml mh') # wheel leg hip
-fx,fy = symbols('fx fy') # ext force to bottom of wheel
 uw, uk = symbols('uw uk') # motor torq (wheel, knee)
 x0 = symbols('x0') # offset
 k = symbols('k') # torsion spring elastic coeff
@@ -24,7 +23,7 @@ g = symbols('g')
 context = { mw: 1, Iw: 1./200, r: 0.1,
             ml: 1, Il: 0.09/12, ll: 0.3,
             mh: 8, Ih: 8*0.09/12, lh: 0.3,
-            k:0,
+            k:200,
             g: 9.81
         }
 
