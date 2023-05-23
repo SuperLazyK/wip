@@ -33,7 +33,7 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
 
 class WIPG(LinkTreeModel):
 
-    def __init__(self, simp=True):
+    def __init__(self, simp=False):
         # initial wheel angle should be vertical
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
