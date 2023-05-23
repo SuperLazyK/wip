@@ -349,44 +349,41 @@ def test3():
     printM(Ic)
 
 
-def test():
-    g = symbols("g")
-    m, r, l = symbols("m, r, l")
-    js = [ StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0))
-         , StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(0, 0, 0)) 
-         , WheelJointLink("qw", m, r, RackPinionJoint(r), XT=Xpln(pi/2, 0, 0))
-         , StickJointLink("ql", m, l, RevoluteJoint(), cx=l)
-         ]
-    js = [ StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(pi/2, 0, 0))
-         , StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0)) 
-         , WheelJointLink("qw", m, r, RackPinionJoint(r), XT=Xpln(pi/2, 0, 0))
-         , StickJointLink("ql", m, l, RevoluteJoint(), cx=l)
-         ]
-    #js = [WheelJointLink("qw", m, r, RackPinionJoint(r))]
-    model = LinkTreeModel(js, g, X0=Xpln(0, 0, 0))
-    for i in range(len(js)):
-        print(i)
-        th, x, y = fromX(model.jointlinks[i].X_r_to)
-        print((simplify(th), simplify(x),simplify(y)))
-    model.gen_function({r:0.1, l:0.5})
-    cmds = model.draw()
+def view(model, eh=None):
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
 
+    t = 0
+    dt = 0.001
+
+    pause = True
     def event_handler(key, shifted):
+        eh(key, shifted)
+        nonlocal pause
         if key == 'q':
             sys.exit()
-
+        elif key == 's':
+            pause = pause ^ True
 
     while True:
+        cmds = model.draw()
+
         viewer.handle_event(event_handler)
         viewer.clear()
-        #viewer.text([f"t: {t:.03f} :q {q[0]:.03f} {q[1]:.03f}"])
+        viewer.text([ f"t: {t:.03f}"
+                    , graphic.arr2txt(model.q_v, " q")
+                    , graphic.arr2txt(model.dq_v, "dq")
+                    ])
         viewer.draw(cmds)
         viewer.draw_horizon(0)
-        viewer.flush(0.01)
-    sys.exit(0)
+        viewer.flush(dt)
 
-if __name__ == '__main__':
-    test()
+        if pause:
+            continue
+
+        t = t + dt
+
+        model.feedback()
+        model.step(dt)
+
 
