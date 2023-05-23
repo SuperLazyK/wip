@@ -33,15 +33,17 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
 
 class WIPG(LinkTreeModel):
 
-    def __init__(self):
+    def __init__(self, simp=True):
         # initial wheel angle should be vertical
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
-        self.cancel_force_knee = lambdify(self.syms(), simplify(self.counter_joint_force()[IDX_H,0]).subs(context))
-        #self.cancel_force_knee = lambdify(self.syms(), (self.counter_joint_force()[IDX_H,0]).subs(context))
+        if simp:
+            self.cancel_force_knee = lambdify(self.syms(), simplify(self.counter_joint_force()[IDX_H,0]).subs(context))
+        else:
+            self.cancel_force_knee = lambdify(self.syms(), (self.counter_joint_force()[IDX_H,0]).subs(context))
         self.reset()
 
     def reset(self):
