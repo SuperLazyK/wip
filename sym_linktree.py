@@ -43,6 +43,13 @@ class LinkTreeModel:
         self.composite_inertia()
         self.cog = self.calc_cog()
 
+        self.reset_state()
+
+    def sim_input(self):
+        return []
+
+    def draw_input(self):
+        return []
 
     def update_vel_X(self):
         for i in range(self.NB):
@@ -189,38 +196,67 @@ class LinkTreeModel:
         C = self.inverse_dynamics([0 for i in range(self.NB)], fext)
         return C
 
+    def calc_cog(self, ith=0): # global coordinate
+        _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].X_r_to))
+        return Matrix([cx, cy])
+
+    def joint_info(self, simp=True):
+        for jl in self.jointlinks:
+            print(jl.name, fromX(jl.X_r_to, simp))
+
+    #----------------
+    # simulation
+    #----------------
+
+    def reset_state(self):
+        self.q_v = np.zeros(self.NB)
+        self.dq_v = np.zeros(self.NB)
+        self.fext_v =np.zeros((self.NB, 3))
+
+    def v_sim_input(self):
+        return []
+
+    def v_draw_input(self):
+        return []
+
+    def gen_function(self, context={}):
+        self.ddq_f = self.gen_ddq_f(context)
+        self.draw_cmds = self.gen_draw_cmds(context)
+
     # foward dynqmics
-    def gen_ddq_f(self, input_sym_list=[], ctx={}):
+    def gen_ddq_f(self, context={}):
+        syms = self.q() + self.dq() + self.fext() + self.sim_input()
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
         C = self.counter_joint_force()
         fext = [[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks]
-        syms = self.syms(input_sym_list)
-        Hevalf = lambdify(syms, self.H.subs(ctx))
-        rhs = lambdify(syms, (tau-C).subs(ctx))
+        Hevalf = lambdify(syms, self.H.subs(context))
+        rhs = lambdify(syms, (tau-C).subs(context))
         def ddq_f(qv, dqv, fextv, uv):
             b = rhs(*qv, *dqv, *fextv.reshape(-1), *uv).reshape(-1).astype(np.float64)
             A = Hevalf(*qv, *dqv, *fextv.reshape(-1), *uv)
             return np.linalg.solve(A, b)
         return ddq_f
 
-    def calc_cog(self, ith=0): # global coordinate
-        _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].X_r_to))
-        return Matrix([cx, cy])
-
-    def gen_draw_cmds(self, input_sym_list, ctx):
+    def gen_draw_cmds(self, context={}):
         q_sym_list = self.q()
         dq_sym_list = self.dq()
-        draw_cmd_fns = [jl.gen_draw_cmds(q_sym_list + dq_sym_list + input_sym_list, ctx) for jl in self.jointlinks]
-        eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(ctx))
+        input_sym_list = self.draw_input()
+        draw_cmd_fns = [jl.gen_draw_cmds(q_sym_list + dq_sym_list + input_sym_list, context) for jl in self.jointlinks]
+        eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(context))
         def draw_cmds(qv, dqv, v):
             p = eval_cog_pos(*qv, *v)
             return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue", name="cog"))
         return draw_cmds
 
-    def joint_info(self, simp=True):
-        for jl in self.jointlinks:
-            print(jl.name, fromX(jl.X_r_to, simp))
+    def draw(self):
+        return self.draw_cmds(self.q_v, self.dq_v, self.v_draw_input())
+
+    def step(self, dt):
+        ddq = self.ddq_f(self.q_v, self.dq_v, self.fext_v, self.v_sim_input())
+        self.dq_v = self.dq_v + ddq * dt
+        self.q_v = self.q_v + self.dq_v * dt
+
 
 def test1():
     g = symbols('g')
@@ -331,8 +367,8 @@ def test():
         print(i)
         th, x, y = fromX(model.jointlinks[i].X_r_to)
         print((simplify(th), simplify(x),simplify(y)))
-    draw_cmds = model.gen_draw_cmds([], {r:0.1, l:0.5})
-    cmds = draw_cmds([0 for i in range(len(js))], [0 for i in range(len(js))], [])
+    model.gen_function({r:0.1, l:0.5})
+    cmds = model.draw()
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
 
