@@ -23,8 +23,8 @@ g = symbols('g')
 context = { mw: 1, Iw: 1./200, r: 0.1,
             ml: 1, Il: 0.09/12, ll: 0.3,
             mh: 8, Ih: 8*0.09/12, lh: 0.3,
-            k:200,
-            g: 9.81
+            k:0,
+            g:9.81
         }
 
 class WIPG(LinkTreeModel):
@@ -40,22 +40,23 @@ class WIPG(LinkTreeModel):
         #jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         jl3 = StickSpringJointLink("qh", mh, lh, k, 0, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         #plant_model = LinkTreeModel([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
-        virtual = False
-        if virtual:
+        self.virtual = True
+        #self.virtual = False
+        if self.virtual:
             self.IDX_Y=0
             self.IDX_W=1
             self.IDX_L=2
             self.IDX_H=3
             super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
             self.q_v = np.array([0, 0, 0, np.deg2rad(45)])
-            self.dq_v = np.array([0, 3, 0, 0])
+            self.dq_v = np.array([0, 0, 0, 0])
         else:
             self.IDX_W=0
             self.IDX_L=1
             self.IDX_H=2
             super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
             self.q_v = np.array([0, 0, np.deg2rad(45)])
-            self.dq_v = np.array([3, 0, np.deg2rad(45)])
+            self.dq_v = np.array([0, 0, 0])
 
         # initial status
         self.v_fext =np.zeros((self.NB, 3))
@@ -134,17 +135,34 @@ class WIPG(LinkTreeModel):
         return self.draw_g_cmds(self.q_v, self.dq_v, [self.x0_v])
 
     def step(self, dt):
-        Kp = 1000
-        Kd = 100
+        Kp = 100
+        Kd = Kp * 0.1
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
+
+        if self.virtual:
+            y = self.q_v[self.IDX_Y]
+            dy = self.dq_v[self.IDX_Y]
+            if y < 0:
+                print("ground")
+                b = 100.
+                k = b * b / 4*(context[mh] + context[ml] + context[mw])
+                self.v_fext[self.IDX_W][2] = - y * k - b * dy
+            else:
+                print("air")
+                self.v_fext[self.IDX_W][2] = 0
+
         self.v_uk = Kp*(self.p_ref - self.qh_v()) - Kd * self.dqh_v() + self.cancel_force_knee(*self.q_v, *self.dq_v, *self.v_fext.reshape(-1))
-        self.v_uw = wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
+        self.v_uw = 0 # wip_wheel_torq(self.K, self.v_ref, self.q_v, self.dq_v, self.a0f(self.p_ref))
         #self.v_uk = np.clip(self.v_uk, -max_torq_k, max_torq_k)
         #self.v_uw = np.clip(self.v_uw, -max_torq_w, max_torq_w)
+        ddq = self.ddqf_g(self.q_v, self.dq_v, self.v_fext, [self.v_uw, self.v_uk, self.x0_v])
+        print("u", self.v_uw, self.v_uk)
         print("q", self.q_v)
         print("dq", self.dq_v)
-        self.q_v, self.dq_v = euler_step(self.ddqf_g, self.q_v, self.dq_v, self.v_fext, dt, [self.v_uw, self.v_uk, self.x0_v])
+        print("ddq", ddq)
+        self.dq_v = self.dq_v + ddq * dt
+        self.q_v = self.q_v + self.dq_v * dt
 
 def test():
     model_g = WIPG()
