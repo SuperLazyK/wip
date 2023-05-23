@@ -253,7 +253,15 @@ class LinkTreeModel:
     def draw(self):
         return self.draw_cmds(self.q_v, self.dq_v, self.v_draw_input())
 
+    def update_sim_input(self):
+        pass
+
+    def update_fext(self):
+        pass
+
     def step(self, dt):
+        self.update_fext()
+        self.update_sim_input()
         ddq = self.ddq_f(self.q_v, self.dq_v, self.fext_v, self.v_sim_input())
         self.dq_v = self.dq_v + ddq * dt
         self.q_v = self.q_v + self.dq_v * dt
@@ -383,7 +391,6 @@ def view(model, eh=None):
 
         t = t + dt
 
-        model.feedback()
         model.step(dt)
 
 
