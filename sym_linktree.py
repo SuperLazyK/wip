@@ -223,6 +223,10 @@ class LinkTreeModel:
         self.ddq_f = self.gen_ddq_f(context)
         self.draw_cmds = self.gen_draw_cmds(context)
 
+    def equation(self):
+        tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
+        return self.H * Matrix(self.ddq()) + self.counter_joint_force() - tau
+
     # foward dynqmics
     def gen_ddq_f(self, context={}):
         syms = self.q() + self.dq() + self.fext() + self.sim_input()
