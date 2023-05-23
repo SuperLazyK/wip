@@ -26,17 +26,13 @@ context = { l: 0.5, r: 0.05,
         Iw: 1./800, Ib: 2.25,
         g: 9.81
         }
-
-vy = False
-if vy:
-    IDX_W = 1
-    IDX_Y = 0
-else:
-    IDX_W = 0
+b = 400.
+k = b * b / 4*(context[mb] + context[mw]) # zeta == 1
 
 class WIPG(LinkTreeModel):
 
-    def __init__(self, simp=True):
+    def __init__(self, vy=True):
+        self.vy = vy
         # initial wheel angle should be vertical
         if vy:
             jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0), Icog=0)
@@ -51,6 +47,9 @@ class WIPG(LinkTreeModel):
         self.reset()
 
     def reset(self):
+        if self.vy:
+            IDX_Y = 0
+            self.q_v[IDX_Y] = -(context[mb] + context[mw]) * context[g] / k
         self.v_ref = 0 # horizontal velocity
         self.x0_v = 0
         self.v_uw = 0
@@ -67,30 +66,51 @@ class WIPG(LinkTreeModel):
     def v_draw_input(self):
         return [self.x0_v]
 
-    def feedback(self):
+    def update_sim_input(self):
+        if self.vy:
+            IDX_W = 1
+        else:
+            IDX_W = 0
         K = np.array([[-1, 41.26540066, 125.12381105]])
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[IDX_W:], self.dq_v[IDX_W:], 0)
         self.v_uw = v_uw
-        b = 400.
-        k = b * b / 4*(context[mb] + context[mw]) # zeta == 1
-        if vy:
+
+    def update_fext(self):
+        if self.vy:
+            IDX_W = 1
+            IDX_Y = 0
             if self.q_v[IDX_Y] < 0:
                 self.fext_v[IDX_W][2] =-k * self.q_v[IDX_Y] -b * self.dq_v[IDX_Y]
             else:
                 self.fext_v[IDX_W][2] = 0
 
-def test():
-    model_g = WIPG()
+    def hook_pre_step(self):
+        print("q", self.q_v)
+        print("dq", self.dq_v)
+        print("uw", self.v_uw)
 
+    def hook_post_step(self):
+        print("ddq", self.ddq_v)
+
+def test():
+    model = WIPG(vy=False)
+    modelvy = WIPG(vy=True)
+
+    #printM(simplify(model.counter_joint_force() - modelvy.counter_joint_force()[1:,0]))
+    #printM(simplify(modelvy.H))
+    #printM(simplify(model.H))
+    #return
+
+    dt = 0.001
     def event_handler(key, shifted):
         if key == 'l':
-            model_g.v_ref = 5
+            modelvy.v_ref = 5
         elif key == 'h':
-            model_g.v_ref = -5
+            modelvy.v_ref = -5
         elif key == 'j':
-            model_g.v_ref = 0
+            modelvy.v_ref = 0
 
-    view(model_g, event_handler)
+    view(modelvy, event_handler)
 
 if __name__ == '__main__':
     test()

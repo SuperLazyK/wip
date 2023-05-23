@@ -259,12 +259,20 @@ class LinkTreeModel:
     def update_fext(self):
         pass
 
+    def hook_pre_step(self):
+        pass
+
+    def hook_post_step(self):
+        pass
+
     def step(self, dt):
         self.update_fext()
         self.update_sim_input()
-        ddq = self.ddq_f(self.q_v, self.dq_v, self.fext_v, self.v_sim_input())
-        self.dq_v = self.dq_v + ddq * dt
+        self.hook_pre_step()
+        self.ddq_v = self.ddq_f(self.q_v, self.dq_v, self.fext_v, self.v_sim_input())
+        self.dq_v = self.dq_v + self.ddq_v * dt
         self.q_v = self.q_v + self.dq_v * dt
+        self.hook_post_step()
 
 
 def test1():
