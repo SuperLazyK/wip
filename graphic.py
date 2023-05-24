@@ -77,7 +77,7 @@ class Viewer():
             elif cmd["type"] == "circle":
                 pygame.draw.circle(self.screen, s2color(cmd.get("color")), self.conv_pos(cmd["origin"]), self.scale * cmd["r"],  width=int(1))
 
-    def flush(self, dt):
+    def flush(self, Hz):
         pygame.display.flip()
-        self.clock.tick(int(1./dt))
+        self.clock.tick(Hz)
 

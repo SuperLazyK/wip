@@ -36,6 +36,7 @@ class WIPG(LinkTreeModel):
         # initial wheel angle should be vertical
         if self.vy:
             self.IDX_Y=0
+            self.IDX_W=1
             self.IDX_L=2
             self.IDX_H=3
             jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0), Icog=0)
@@ -47,6 +48,7 @@ class WIPG(LinkTreeModel):
             jl1.fa = x * fwy
             jl1.fy = fwy
         else:
+            self.IDX_W=0
             self.IDX_L=1
             self.IDX_H=2
             jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
@@ -118,7 +120,8 @@ class WIPG(LinkTreeModel):
         elif self.qh_ref == np.deg2rad(45):
             K = np.array([[-1., 13.53793325, 55.79660305]])
             a0_v = -0.36833839806552643
-        v_uw = wip_wheel_torq(K, self.v_ref, self.q_v, self.dq_v, a0_v)
+
+        v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
         #max_torq_w = 3.5 # Nm
         #max_torq_k = 40 # Nm
@@ -137,7 +140,8 @@ class WIPG(LinkTreeModel):
 
 
 def test():
-    model_g = WIPG(vy=False)
+    #model_g = WIPG(vy=False)
+    model_g = WIPG(vy=True)
     #printM(model_g.equation())
 
     def event_handler(key, shifted):
@@ -154,7 +158,7 @@ def test():
         elif key == 'k':
             model_g.qh_ref = 0
 
-    view(model_g, event_handler)
+    view(model_g, event_handler, dt=0.001)
 
 if __name__ == '__main__':
     test()

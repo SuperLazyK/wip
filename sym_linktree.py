@@ -373,12 +373,13 @@ def test3():
     printM(Ic)
 
 
-def view(model, eh=None):
+def view(model, eh=None, dt=0.001, Hz=None):
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
 
     t = 0
-    dt = 0.001
+    if Hz is None:
+        Hz = 1./dt
 
     pause = True
     def event_handler(key, shifted):
@@ -400,7 +401,7 @@ def view(model, eh=None):
                     ])
         viewer.draw(cmds)
         viewer.draw_horizon(0)
-        viewer.flush(dt)
+        viewer.flush(Hz)
 
         if pause:
             continue
