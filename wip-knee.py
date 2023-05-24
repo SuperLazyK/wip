@@ -40,10 +40,6 @@ class WIPG(LinkTreeModel):
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
-        if simp:
-            self.cancel_force_knee = lambdify(self.all_syms(), simplify(self.counter_joint_force()[IDX_H,0]).subs(context))
-        else:
-            self.cancel_force_knee = lambdify(self.all_syms(), (self.counter_joint_force()[IDX_H,0]).subs(context))
         self.reset()
 
     def reset(self):
@@ -90,7 +86,7 @@ class WIPG(LinkTreeModel):
         Kp = 100
         Kd = Kp * 0.1
 
-        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force_knee(*self.q_v, *self.dq_v, *self.v_sim_input())
+        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force[IDX_H](*self.all_vals())
 
         if self.qh_ref  == 0:
             K = np.array([[-1., 11.20462078, 50.02801177]])

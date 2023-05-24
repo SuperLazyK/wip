@@ -208,6 +208,9 @@ class LinkTreeModel:
     def all_syms(self):
         return self.q() +  self.dq() + self.sim_input()
 
+    def all_vals(self):
+        return [*self.q_v, *self.dq_v, *self.v_sim_input()]
+
     def reset_state(self):
         self.q_v = np.zeros(self.NB)
         self.dq_v = np.zeros(self.NB)
@@ -222,6 +225,7 @@ class LinkTreeModel:
     def gen_function(self, context={}):
         self.ddq_f = self.gen_ddq_f(context)
         self.draw_cmds = self.gen_draw_cmds(context)
+        self.cancel_force = [lambdify(self.all_syms(), (self.counter_joint_force()[i,0]).subs(context)) for i in range(self.NB)]
 
     def equation(self):
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
