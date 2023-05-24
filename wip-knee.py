@@ -49,6 +49,7 @@ class WIPG(LinkTreeModel):
         self.reset()
 
     def reset(self):
+        self.q_v[self.IDX_L]=np.pi/4
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
@@ -108,10 +109,12 @@ class WIPG(LinkTreeModel):
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
-        #max_torq_w = 3.5 # Nm
-        #max_torq_k = 40 # Nm
-        self.v_uk = v_uk
-        self.v_uw = v_uw
+        max_torq_w = 3.5 # Nm
+        max_torq_k = 40 # Nm
+        self.v_uw = np.clip(-max_torq_w, max_torq_w, v_uw)
+        self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
+        #self.v_uk = v_uk
+        #self.v_uw = v_uw
         #self.v_uk = 0
         #self.v_uw = 0
 
