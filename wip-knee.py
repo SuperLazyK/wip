@@ -31,38 +31,24 @@ k = b * b / 4*(context[mh] + context[ml] + context[mw]) # zeta == 1
 
 class WIPG(LinkTreeModel):
 
-    def __init__(self, vy=True):
-        self.vy = vy
+    def __init__(self):
         # initial wheel angle should be vertical
-        if self.vy:
-            self.IDX_Y=0
-            self.IDX_W=1
-            self.IDX_L=2
-            self.IDX_H=3
-            jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0), Icog=0)
-            jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
-            jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
-            jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-            super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
-            _, _, x, _ = Xtoscxy(jl1.X_r_to)
-            jl1.fa = x * fwy
-            jl1.fy = fwy
-        else:
-            self.IDX_W=0
-            self.IDX_L=1
-            self.IDX_H=2
-            jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
-            jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
-            jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-            super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+        self.IDX_Y=0
+        self.IDX_W=1
+        self.IDX_L=2
+        self.IDX_H=3
+        jl0 = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0), Icog=0)
+        jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
+        jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
+        jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
+        super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+        _, _, x, _ = Xtoscxy(jl1.X_r_to)
+        jl1.fa = x * fwy
+        jl1.fy = fwy
         self.gen_function(context)
         self.reset()
 
     def reset(self):
-        if self.vy:
-            self.q_v = np.array([0, 0, 0, np.deg2rad(45)])
-        else:
-            self.q_v = np.array([0, 0, np.deg2rad(45)])
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
@@ -99,11 +85,10 @@ class WIPG(LinkTreeModel):
         return [self.x0_v]
 
     def update_fext(self):
-        if self.vy:
-            if self.q_v[self.IDX_Y] < 0:
-                self.v_fwy =-k * self.q_v[self.IDX_Y] -b * self.dq_v[self.IDX_Y]
-            else:
-                self.v_fwy = 0
+        if self.q_v[self.IDX_Y] < 0:
+            self.v_fwy =-k * self.q_v[self.IDX_Y] -b * self.dq_v[self.IDX_Y]
+        else:
+            self.v_fwy = 0
 
     def update_sim_input(self):
         Kp = 100
@@ -140,15 +125,13 @@ class WIPG(LinkTreeModel):
 
 
 def test():
-    #model_g = WIPG(vy=False)
-    model_g = WIPG(vy=True)
-    #printM(model_g.equation())
+    model_g = WIPG()
 
     def event_handler(key, shifted):
         if key == 'l':
-            model_g.v_ref = 5
+            model_g.v_ref = 20
         elif key == 'h':
-            model_g.v_ref = -5
+            model_g.v_ref = -20
         elif key == 'j':
             model_g.v_ref = 0
         elif key == 'p':
