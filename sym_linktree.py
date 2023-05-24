@@ -45,12 +45,6 @@ class LinkTreeModel:
 
         self.reset_state()
 
-    def sim_input(self):
-        return []
-
-    def draw_input(self):
-        return []
-
     def update_vel_X(self):
         for i in range(self.NB):
             I  = self.jointlinks[i].I
@@ -81,10 +75,7 @@ class LinkTreeModel:
         return [jl.ddq for jl in self.jointlinks]
 
     def fext(self):
-        return sum([[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks],[])
-
-    def syms(self, others=[]):
-        return self.q() +  self.dq() + self.fext() + others
+        return [[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks]
 
     def parent(self, i):
         return self.parent_idx[i]
@@ -208,11 +199,19 @@ class LinkTreeModel:
     # simulation
     #----------------
 
+    def sim_input(self):
+        return []
+
+    def draw_input(self):
+        return []
+
+    def all_syms(self):
+        return self.q() +  self.dq() + self.sim_input()
+
     def reset_state(self):
         self.q_v = np.zeros(self.NB)
         self.dq_v = np.zeros(self.NB)
         self.ddq_v = np.zeros(self.NB)
-        self.fext_v =np.zeros((self.NB, 3))
 
     def v_sim_input(self):
         return []
@@ -230,17 +229,16 @@ class LinkTreeModel:
 
     # foward dynqmics
     def gen_ddq_f(self, context={}):
-        syms = self.q() + self.dq() + self.fext() + self.sim_input()
+        syms = self.all_syms()
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
         #C = simplify(self.counter_joint_force().subs(context))
         C = self.counter_joint_force().subs(context)
-        fext = [[jl.fa, jl.fx, jl.fy] for jl in self.jointlinks]
         Hevalf = lambdify(syms, self.H.subs(context))
         rhs = lambdify(syms, tau-C)
-        def ddq_f(qv, dqv, fextv, uv):
-            b = rhs(*qv, *dqv, *fextv.reshape(-1), *uv).reshape(-1).astype(np.float64)
-            A = Hevalf(*qv, *dqv, *fextv.reshape(-1), *uv)
+        def ddq_f(qv, dqv, uv):
+            b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
+            A = Hevalf(*qv, *dqv, *uv)
             return np.linalg.solve(A, b)
         return ddq_f
 
@@ -274,7 +272,7 @@ class LinkTreeModel:
         self.update_fext()
         self.update_sim_input()
         self.hook_pre_step()
-        self.ddq_v = self.ddq_f(self.q_v, self.dq_v, self.fext_v, self.v_sim_input())
+        self.ddq_v = self.ddq_f(self.q_v, self.dq_v, self.v_sim_input())
         self.dq_v = self.dq_v + self.ddq_v * dt
         self.q_v = self.q_v + self.dq_v * dt
         self.hook_post_step()

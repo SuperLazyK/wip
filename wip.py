@@ -39,6 +39,9 @@ class WIPG(LinkTreeModel):
             jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
             jl2 = StickJointLink("qs", mb, l, RevoluteJoint(), I=transInertia(mcI(mb, [l, 0], Ib), Xpln(0, 0, 0)), tau=uw)
             super().__init__([jl0, jl1, jl2], g, X0=Xpln(pi/2, 0, 0))
+            _, _, x, _ = Xtoscxy(jl1.X_r_to)
+            jl1.fa = x * fy
+            jl1.fy = fy
         else:
             jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
             jl2 = StickJointLink("qs", mb, l, RevoluteJoint(), I=transInertia(mcI(mb, [l, 0], Ib), Xpln(0, 0, 0)), tau=uw)
@@ -53,12 +56,13 @@ class WIPG(LinkTreeModel):
         self.v_ref = 0 # horizontal velocity
         self.x0_v = 0
         self.v_uw = 0
+        self.v_fy = 0
 
     def sim_input(self):
-        return [uw, x0]
+        return [fy, uw, x0]
 
     def v_sim_input(self):
-        return np.array([self.v_uw, self.x0_v])
+        return np.array([self.v_fy, self.v_uw, self.x0_v])
 
     def draw_input(self):
         return [x0]
@@ -80,9 +84,9 @@ class WIPG(LinkTreeModel):
             IDX_W = 1
             IDX_Y = 0
             if self.q_v[IDX_Y] < 0:
-                self.fext_v[IDX_W][2] =-k * self.q_v[IDX_Y] -b * self.dq_v[IDX_Y]
+                self.v_fy =-k * self.q_v[IDX_Y] -b * self.dq_v[IDX_Y]
             else:
-                self.fext_v[IDX_W][2] = 0
+                self.v_fy = 0
 
     def hook_pre_step(self):
         print("q", self.q_v)

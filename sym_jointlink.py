@@ -128,9 +128,9 @@ class JointLink():
         self.q = symbols(name)
         self.dq = symbols("d"+name)
         self.ddq = symbols("dd"+name)
-        self.fa = symbols("f"+name+"a")
-        self.fx = symbols("f"+name+"x")
-        self.fy = symbols("f"+name+"y")
+        self.fa = 0
+        self.fx = 0
+        self.fy = 0
 
     # XJ: attachment point from the parent to base frame of the body
     def XJ(self):
