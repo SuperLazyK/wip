@@ -211,6 +211,7 @@ class LinkTreeModel:
     def reset_state(self):
         self.q_v = np.zeros(self.NB)
         self.dq_v = np.zeros(self.NB)
+        self.ddq_v = np.zeros(self.NB)
         self.fext_v =np.zeros((self.NB, 3))
 
     def v_sim_input(self):
