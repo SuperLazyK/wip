@@ -86,7 +86,7 @@ class WIPG(LinkTreeModel):
         Kp = 100
         Kd = Kp * 0.1
 
-        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force[IDX_H](*self.all_vals())
+        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force[IDX_H]()
 
         if self.qh_ref  == 0:
             K = np.array([[-1., 11.20462078, 50.02801177]])

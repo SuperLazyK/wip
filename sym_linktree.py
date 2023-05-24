@@ -225,7 +225,8 @@ class LinkTreeModel:
     def gen_function(self, context={}):
         self.ddq_f = self.gen_ddq_f(context)
         self.draw_cmds = self.gen_draw_cmds(context)
-        self.cancel_force = [lambdify(self.all_syms(), (self.counter_joint_force()[i,0]).subs(context)) for i in range(self.NB)]
+        fs = [lambdify(self.all_syms(), (self.counter_joint_force()[i,0]).subs(context)) for i in range(self.NB)]
+        self.cancel_force = [lambda: f(*self.all_vals()) for f in fs]
 
     def equation(self):
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
