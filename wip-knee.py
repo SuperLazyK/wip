@@ -15,6 +15,7 @@ from wip_control import *
 
 r,ll,lh,Iw,Il,Ih,mw,ml,mh = symbols('r ll lh Iw Il Ih mw ml mh') # wheel leg hip
 uw, uk = symbols('uw uk') # motor torq (wheel, knee)
+fyw = symbols('fyw') # offset
 x0 = symbols('x0') # offset
 k = symbols('k') # torsion spring elastic coeff
 g = symbols('g')
@@ -40,9 +41,9 @@ class WIPG(LinkTreeModel):
         super().__init__([jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
         if simp:
-            self.cancel_force_knee = lambdify(self.syms(), simplify(self.counter_joint_force()[IDX_H,0]).subs(context))
+            self.cancel_force_knee = lambdify(self.all_syms(), simplify(self.counter_joint_force()[IDX_H,0]).subs(context))
         else:
-            self.cancel_force_knee = lambdify(self.syms(), (self.counter_joint_force()[IDX_H,0]).subs(context))
+            self.cancel_force_knee = lambdify(self.all_syms(), (self.counter_joint_force()[IDX_H,0]).subs(context))
         self.reset()
 
     def reset(self):
@@ -82,11 +83,14 @@ class WIPG(LinkTreeModel):
     def v_draw_input(self):
         return [self.x0_v]
 
-    def feedback(self):
+    def update_fext(self):
+        pass
+
+    def update_sim_input(self):
         Kp = 100
         Kd = Kp * 0.1
 
-        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force_knee(*self.q_v, *self.dq_v, *self.fext_v.reshape(-1))
+        v_uk = Kp*(self.qh_ref - self.q_v[IDX_H]) - Kd * self.dq_v[IDX_H] + self.cancel_force_knee(*self.q_v, *self.dq_v, *self.v_sim_input())
 
         if self.qh_ref  == 0:
             K = np.array([[-1., 11.20462078, 50.02801177]])
