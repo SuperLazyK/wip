@@ -97,13 +97,9 @@ class WIPG(LinkTreeModel):
         print("ddq", self.ddq_v)
 
 def test():
-    model = WIPG(vy=False)
     modelvy = WIPG(vy=True)
-
-    #printM(simplify(model.counter_joint_force() - modelvy.counter_joint_force()[1:,0]))
-    #printM(simplify(modelvy.H))
-    #printM(simplify(model.H))
-    #return
+    printM(modelvy.equation())
+    return
 
     dt = 0.001
     def event_handler(key, shifted):
