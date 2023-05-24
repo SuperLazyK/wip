@@ -127,24 +127,68 @@ class WIPG(LinkTreeModel):
         print("ddq", self.ddq_v)
 
 
+class WIPA(LinkTreeModel):
+
+    def __init__(self):
+        # initial wheel angle should be vertical
+        self.IDX_X=0
+        self.IDX_Y=1
+        self.IDX_W=2
+        self.IDX_L=3
+        self.IDX_H=4
+        jl0x = StickJointLink("x", 0, 0, PrismaticJoint(), XT=Xpln(pi/2, 0, 0), Icog=0)
+        jl0y = StickJointLink("y", 0, 0, PrismaticJoint(), XT=Xpln(-pi/2, 0, 0), Icog=0)
+        jl1 = WheelJointLink("qw", mw, r, RevoluteJoint(), XT=Xpln(pi/2, 0, 0), Icog=Iw)
+        jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
+        jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
+        super().__init__([jl0x, jl0y, jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+        self.gen_function(context)
+        self.reset()
+
+    def reset(self):
+        self.q_v[self.IDX_L]=np.pi/4
+        self.v_ref = 0 # horizontal velocity
+        self.qh_ref = 0 # knee
+        self.x0_v = 0
+        self.v_uk = 0
+        self.v_uw = 0
+
+    def sim_input(self):
+        return [uw, uk]
+
+    def v_sim_input(self):
+        return np.array([self.v_uw, self.v_uk])
+
+    def update_sim_input(self):
+        Kp = 100
+        Kd = Kp * 0.1
+        v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
+        max_torq_k = 40 # Nm
+        self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
+        #self.v_uk = 0
+        self.v_uw = 0
+
 def test():
     model_g = WIPG()
+    model_a = WIPA()
+
+    model = model_a
 
     def event_handler(key, shifted):
         if key == 'l':
-            model_g.v_ref = 20
+            model.v_ref = 20
         elif key == 'h':
-            model_g.v_ref = -20
+            model.v_ref = -20
         elif key == 'j':
-            model_g.v_ref = 0
+            model.v_ref = 0
         elif key == 'p':
-            model_g.qh_ref = np.deg2rad(45)
+            model.qh_ref = np.deg2rad(45)
         elif key == 'n':
-            model_g.qh_ref = np.deg2rad(-45)
+            model.qh_ref = np.deg2rad(-45)
         elif key == 'k':
-            model_g.qh_ref = 0
+            model.qh_ref = 0
 
-    view(model_g, event_handler, dt=0.001)
+    view(model, event_handler, dt=0.001)
 
 if __name__ == '__main__':
     test()
