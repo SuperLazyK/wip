@@ -168,25 +168,47 @@ class WIPA(LinkTreeModel):
         #self.v_uk = 0
         self.v_uw = 0
 
-def test():
-    model_g = WIPG()
-    model_a = WIPA()
+    def hook_post_step(self):
+        pass
 
-    model = model_a
+class WIP():
+    def __init__(self):
+        self.model_g = WIPG()
+        self.model_a = WIPA()
+        self.ground = True
+
+    def step(self):
+        if self.ground:
+        pass
+
+    def draw(self):
+        if self.ground:
+        pass
+
+    def set_vel_ref(self, v):
+        self.model_g.v_ref = v
+
+    def set_knee_ref(self, v):
+        self.model_g.qh_ref = v
+        self.model_a.qh_ref = v
+
+
+def test():
+    model = WIP()
 
     def event_handler(key, shifted):
         if key == 'l':
-            model.v_ref = 20
+            model.set_vel_ref(20)
         elif key == 'h':
-            model.v_ref = -20
+            model.set_vel_ref(-20)
         elif key == 'j':
-            model.v_ref = 0
+            model.set_vel_ref(0)
         elif key == 'p':
-            model.qh_ref = np.deg2rad(45)
+            model.set_knee_ref(np.deg2rad(45))
         elif key == 'n':
-            model.qh_ref = np.deg2rad(-45)
+            model.set_knee_ref(np.deg2rad(-45))
         elif key == 'k':
-            model.qh_ref = 0
+            model.set_knee_ref(np.deg2rad(0))
 
     view(model, event_handler, dt=0.001)
 

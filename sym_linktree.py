@@ -395,10 +395,7 @@ def view(model, eh=None, dt=0.001, Hz=None):
 
         viewer.handle_event(event_handler)
         viewer.clear()
-        viewer.text([ f"t: {t:.03f}"
-                    , graphic.arr2txt(model.q_v, " q")
-                    , graphic.arr2txt(model.dq_v, "dq")
-                    ])
+        viewer.text([ f"t: {t:.03f}" ])
         viewer.draw(cmds)
         viewer.draw_horizon(0)
         viewer.flush(Hz)
