@@ -192,13 +192,15 @@ class WIPA(LinkTreeModel):
         return self.q_v[self.IDX_Y] < 0
 
 class WIP():
+
     def __init__(self):
         self.model_g = WIPG()
         self.model_a = WIPA()
-        self.ground = False
+        self.gen_friction_impulse(self.model_a, context)
+        self.use_ground = False
 
     def step(self, dt):
-        if self.ground:
+        if self.use_ground:
             self.model_g.step(dt)
             if not self.model_g.on_ground():
                 self.jump()
@@ -207,36 +209,48 @@ class WIP():
             if self.model_a.on_ground():
                 self.land()
 
+    def draw(self):
+        if self.use_ground:
+            return self.model_g.draw()
+        else:
+            return self.model_a.draw()
+
     def jump(self):
         print("jump")
+        self.use_ground = False
+        model_a.q_v = model_g.
+        model_a.dq_v = model_g.
         pass
 
     def land(self):
         print("land")
-        pass
+        print(self.model_a.dq_v)
+        self.model_a.dq_v = self.impulse()
+        print(self.model_a.dq_v)
+        sys.exit(0)
+        model_g.q_v = model_a.q_v[model_a.IDX_Y:]
+        model_g.dq_v = model_a.dq_v[model_a.IDX_Y:]
+        model_g.x0 = XXX
+        self.use_ground = True
 
-    def gen_friction_impulse(self):
-        fext = [zeros(3,1) for i in range(model_a.NB)]
-        zeros = [0 for i in range(model_a.NB)]
-        fext[model_a.IDX_W][0] = - fwx * ( - r) # global coordinate torq!! but q2 == 0
-        fext[model_a.IDX_W][1] = fwx
-        dq = model_a.dq()
-        Cfric = model_a.inverse_dynamics(zeros, fext, impulse=True).subs(context)
-        H = MatrixSymbol("H", model_a.NB, model_a.NB)
-        delta = H.inverse() * (-Cfric)
-        sol = solve(-r * (dq[model_a.IDX_W] + delta[model_a.IDX_W]) - (dq[model_a.IDX_X] + delta[model_a.IDX_X]), fwx)
+    def gen_friction_impulse(self, model, context):
+        fext = [zeros(3,1) for i in range(model.NB)]
+        fext[model.IDX_W][0] = - fwx * ( - r) # global coordinate torq!! but q2 == 0
+        fext[model.IDX_W][1] = fwx
+        q = model.q()
+        dq = model.dq()
+        Cfric = model.inverse_dynamics([0 for i in range(model.NB)], fext, impulse=True).subs(context)
+        Hinv = MatrixSymbol("Hinv", model.NB, model.NB)
+        delta = Hinv * (-Cfric)
+        sol = solve(-r * (dq[model.IDX_W] + delta[model.IDX_W, 0]) - (dq[model.IDX_X] + delta[model.IDX_X, 0]), fwx)[0]
         delta_sol = delta.subs(context | {fwx:sol})
-        new_dqv = dq + delta_sol
-        f = lambdify([H, dq], new_dqv)
-        def friction_impulse(qv, dqv):
-            return f(model_a.H_f(*qv, *dqv), *dqv)
-        return friction_impulse
+        new_dqv = Matrix(dq) + delta_sol
+        f = lambdify([Hinv] + q + dq, new_dqv)
+        def friction_impulse():
+            Hv = np.linalg.inv(model.H_f(*model.all_vals()))
+            return f(Hv, *model.q_v, *model.dq_v).reshape(-1)
+        self.impulse = friction_impulse
 
-    def draw(self):
-        if self.ground:
-            return self.model_g.draw()
-        else:
-            return self.model_a.draw()
 
     def set_vel_ref(self, v):
         self.model_g.set_vel_ref(v)

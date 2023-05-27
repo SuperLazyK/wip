@@ -239,11 +239,11 @@ class LinkTreeModel:
         syms = self.all_syms()
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
-        Hevalf = lambdify(syms, self.H.subs(context))
+        self.H_f = lambdify(syms, self.H.subs(context))
         rhs = lambdify(syms, tau-C)
         def ddq_f(qv, dqv, uv):
             b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
-            A = Hevalf(*qv, *dqv, *uv)
+            A = self.H_f(*qv, *dqv, *uv)
             return np.linalg.solve(A, b)
         return ddq_f
 
