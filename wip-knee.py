@@ -134,7 +134,7 @@ class WIPG(LinkTreeModel):
         self.qh_ref = v
 
     def on_ground(self):
-        return self.q_v[self.IDX_Y] < 0
+        return self.q_v[self.IDX_Y] < context[r]
 
 class WIPA(LinkTreeModel):
 
@@ -189,7 +189,7 @@ class WIPA(LinkTreeModel):
         self.qh_ref = v
 
     def on_ground(self):
-        return self.q_v[self.IDX_Y] < 0
+        return self.q_v[self.IDX_Y] < context[r]
 
 class WIP():
 
@@ -218,19 +218,16 @@ class WIP():
     def jump(self):
         print("jump")
         self.use_ground = False
-        model_a.q_v = model_g.
-        model_a.dq_v = model_g.
+        #model_a.q_v = model_g.
+        #model_a.dq_v = model_g.
         pass
 
     def land(self):
         print("land")
-        print(self.model_a.dq_v)
         self.model_a.dq_v = self.impulse()
-        print(self.model_a.dq_v)
-        sys.exit(0)
-        model_g.q_v = model_a.q_v[model_a.IDX_Y:]
-        model_g.dq_v = model_a.dq_v[model_a.IDX_Y:]
-        model_g.x0 = XXX
+        self.model_g.q_v = self.model_a.q_v[self.model_a.IDX_Y:]
+        self.model_g.dq_v = self.model_a.dq_v[self.model_a.IDX_Y:]
+        self.model_g.x0_v = self.model_a.q_v[self.model_a.IDX_X] - context[r] * self.model_a.q_v[self.model_a.IDX_W]
         self.use_ground = True
 
     def gen_friction_impulse(self, model, context):
