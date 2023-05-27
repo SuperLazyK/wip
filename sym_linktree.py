@@ -242,7 +242,6 @@ class LinkTreeModel:
         Hevalf = lambdify(syms, self.H.subs(context))
         rhs = lambdify(syms, tau-C)
         def ddq_f(qv, dqv, uv):
-            print(uv)
             b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
             A = Hevalf(*qv, *dqv, *uv)
             return np.linalg.solve(A, b)
