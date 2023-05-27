@@ -15,7 +15,8 @@ from wip_control import *
 
 r,ll,lh,Iw,Il,Ih,mw,ml,mh = symbols('r ll lh Iw Il Ih mw ml mh') # wheel leg hip
 uw, uk = symbols('uw uk') # motor torq (wheel, knee)
-fwy = symbols('fwy') # offset
+fwx = symbols('fwx') # for impulse
+fwy = symbols('fwy') # normal
 x0 = symbols('x0') # offset
 k = symbols('k') # torsion spring elastic coeff
 g = symbols('g')
@@ -152,6 +153,8 @@ class WIPA(LinkTreeModel):
 
     def reset(self):
         self.q_v[self.IDX_L]=np.pi/4
+        self.q_v[self.IDX_Y]=1
+        self.dq_v[self.IDX_X]=1
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
@@ -176,30 +179,60 @@ class WIPA(LinkTreeModel):
     def hook_post_step(self):
         pass
 
-#class WIP():
-#    def __init__(self):
-#        self.model_g = WIPG()
-#        self.model_a = WIPA()
-#        self.ground = True
-#
-#    def step(self):
-#        if self.ground:
-#        pass
-#
-#    def draw(self):
-#        if self.ground:
-#        pass
-#
-#    def set_vel_ref(self, v):
-#        self.model_g.v_ref = v
-#
-#    def set_knee_ref(self, v):
-#        self.model_g.qh_ref = v
-#        self.model_a.qh_ref = v
+    def set_vel_ref(self, v):
+        self.v_ref = v
 
+    def set_knee_ref(self, v):
+        self.qh_ref = v
+
+
+class WIP():
+    def __init__(self):
+        self.model_g = WIPG()
+        self.model_a = WIPA()
+        self.ground = False
+
+    def step(self, dt):
+        if self.ground:
+            self.model_g.step(dt)
+        else:
+            self.model_a.step(dt)
+        # collision
+        pass
+
+    def draw(self):
+        if self.ground:
+            return self.model_g.draw()
+        else:
+            return self.model_a.draw()
+
+    def set_vel_ref(self, v):
+        self.model_g.set_vel_ref(v)
+
+    def set_knee_ref(self, v):
+        self.model_g.set_knee_ref(v)
+        self.model_a.set_knee_ref(v)
+
+
+def gen_friction_impulse(model_a, context):
+    fext = [zeros(3,1) for i in range(model_a.NB)]
+    zeros = [0 for i in range(model_a.NB)]
+    fext[model_a.IDX_W][0] = - fwx * ( - r) # global coordinate torq!! but q2 == 0
+    fext[model_a.IDX_W][1] = fwx
+    dq = model_a.dq()
+    Cfric = model_a.inverse_dynamics(zeros, fext, impulse=True).subs(context)
+    H = MatrixSymbol("H", model_a.NB, model_a.NB)
+    delta = H.inverse() * (-Cfric)
+    sol = solve(-r * (dq[model_a.IDX_W] + delta[model_a.IDX_W]) - (dq[model_a.IDX_X] + delta[model_a.IDX_X]), fwx)
+    delta_sol = delta.subs(context | {fwx:sol})
+    new_dqv = dq + delta_sol
+    f = lambdify([H, dq], new_dqv)
+    def friction_impulse(qv, dqv):
+        return f(model_a.H_f(*qv, *dqv), *dqv)
+    return friction_impulse
 
 def test():
-    model = WIPG()
+    model = WIP()
 
     def event_handler(key, shifted):
         if key == 'l':
