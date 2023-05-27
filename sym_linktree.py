@@ -182,10 +182,9 @@ class LinkTreeModel:
         return sum([jl.potential_energy(self.g) for jl in self.jointlinks])
 
     # joint force to keep the attitude
-    def counter_joint_force(self):
+    def calc_counter_joint_force(self):
         fext = [Matrix([jl.fa, jl.fx, jl.fy]) for jl in self.jointlinks]
-        C = self.inverse_dynamics([0 for i in range(self.NB)], fext)
-        return C
+        self.C = self.inverse_dynamics([0 for i in range(self.NB)], fext)
 
     def calc_cog(self, ith=0): # global coordinate
         _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].X_r_to))
@@ -223,25 +222,27 @@ class LinkTreeModel:
         return []
 
     def gen_function(self, context={}):
-        self.ddq_f = self.gen_ddq_f(context)
+        self.calc_counter_joint_force()
+        #C = simplify(self.C.subs(context))
+        C = self.C.subs(context)
+        self.ddq_f = self.gen_ddq_f(C, context)
         self.draw_cmds = self.gen_draw_cmds(context)
-        fs = [lambdify(self.all_syms(), (self.counter_joint_force()[i,0]).subs(context)) for i in range(self.NB)]
+        fs = [lambdify(self.all_syms(), C[i,0]) for i in range(self.NB)]
         self.cancel_force = [lambda: f(*self.all_vals()) for f in fs]
 
     def equation(self):
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
-        return self.H * Matrix(self.ddq()) + self.counter_joint_force() - tau
+        return self.H * Matrix(self.ddq()) + self.C - tau
 
     # foward dynqmics
-    def gen_ddq_f(self, context={}):
+    def gen_ddq_f(self, C, context={}):
         syms = self.all_syms()
         tau = Matrix([jl.active_joint_force() for jl in self.jointlinks])
         # force to cancel for no joint acc
-        #C = simplify(self.counter_joint_force().subs(context))
-        C = self.counter_joint_force().subs(context)
         Hevalf = lambdify(syms, self.H.subs(context))
         rhs = lambdify(syms, tau-C)
         def ddq_f(qv, dqv, uv):
+            print(uv)
             b = rhs(*qv, *dqv, *uv).reshape(-1).astype(np.float64)
             A = Hevalf(*qv, *dqv, *uv)
             return np.linalg.solve(A, b)
