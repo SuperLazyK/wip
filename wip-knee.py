@@ -111,10 +111,10 @@ class WIPG(LinkTreeModel):
 
         max_torq_w = 3.5 # Nm
         max_torq_k = 40 # Nm
-        self.v_uw = np.clip(-max_torq_w, max_torq_w, v_uw)
-        self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
-        #self.v_uk = v_uk
-        #self.v_uw = v_uw
+        #self.v_uw = np.clip(-max_torq_w, max_torq_w, v_uw)
+        #self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
+        self.v_uk = v_uk
+        self.v_uw = v_uw
         #self.v_uk = 0
         #self.v_uw = 0
 
@@ -126,6 +126,11 @@ class WIPG(LinkTreeModel):
     def hook_post_step(self):
         print("ddq", self.ddq_v)
 
+    def set_vel_ref(self, v):
+        self.v_ref = v
+
+    def set_knee_ref(self, v):
+        self.qh_ref = v
 
 class WIPA(LinkTreeModel):
 
@@ -171,30 +176,30 @@ class WIPA(LinkTreeModel):
     def hook_post_step(self):
         pass
 
-class WIP():
-    def __init__(self):
-        self.model_g = WIPG()
-        self.model_a = WIPA()
-        self.ground = True
-
-    def step(self):
-        if self.ground:
-        pass
-
-    def draw(self):
-        if self.ground:
-        pass
-
-    def set_vel_ref(self, v):
-        self.model_g.v_ref = v
-
-    def set_knee_ref(self, v):
-        self.model_g.qh_ref = v
-        self.model_a.qh_ref = v
+#class WIP():
+#    def __init__(self):
+#        self.model_g = WIPG()
+#        self.model_a = WIPA()
+#        self.ground = True
+#
+#    def step(self):
+#        if self.ground:
+#        pass
+#
+#    def draw(self):
+#        if self.ground:
+#        pass
+#
+#    def set_vel_ref(self, v):
+#        self.model_g.v_ref = v
+#
+#    def set_knee_ref(self, v):
+#        self.model_g.qh_ref = v
+#        self.model_a.qh_ref = v
 
 
 def test():
-    model = WIP()
+    model = WIPG()
 
     def event_handler(key, shifted):
         if key == 'l':
