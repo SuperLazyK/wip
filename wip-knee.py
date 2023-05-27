@@ -133,6 +133,9 @@ class WIPG(LinkTreeModel):
     def set_knee_ref(self, v):
         self.qh_ref = v
 
+    def on_ground(self):
+        return self.q_v[self.IDX_Y] < 0
+
 class WIPA(LinkTreeModel):
 
     def __init__(self):
@@ -185,6 +188,8 @@ class WIPA(LinkTreeModel):
     def set_knee_ref(self, v):
         self.qh_ref = v
 
+    def on_ground(self):
+        return self.q_v[self.IDX_Y] < 0
 
 class WIP():
     def __init__(self):
@@ -195,10 +200,37 @@ class WIP():
     def step(self, dt):
         if self.ground:
             self.model_g.step(dt)
+            if not self.model_g.on_ground():
+                self.jump()
         else:
             self.model_a.step(dt)
-        # collision
+            if self.model_a.on_ground():
+                self.land()
+
+    def jump(self):
+        print("jump")
         pass
+
+    def land(self):
+        print("land")
+        pass
+
+    def gen_friction_impulse(self):
+        fext = [zeros(3,1) for i in range(model_a.NB)]
+        zeros = [0 for i in range(model_a.NB)]
+        fext[model_a.IDX_W][0] = - fwx * ( - r) # global coordinate torq!! but q2 == 0
+        fext[model_a.IDX_W][1] = fwx
+        dq = model_a.dq()
+        Cfric = model_a.inverse_dynamics(zeros, fext, impulse=True).subs(context)
+        H = MatrixSymbol("H", model_a.NB, model_a.NB)
+        delta = H.inverse() * (-Cfric)
+        sol = solve(-r * (dq[model_a.IDX_W] + delta[model_a.IDX_W]) - (dq[model_a.IDX_X] + delta[model_a.IDX_X]), fwx)
+        delta_sol = delta.subs(context | {fwx:sol})
+        new_dqv = dq + delta_sol
+        f = lambdify([H, dq], new_dqv)
+        def friction_impulse(qv, dqv):
+            return f(model_a.H_f(*qv, *dqv), *dqv)
+        return friction_impulse
 
     def draw(self):
         if self.ground:
@@ -213,23 +245,6 @@ class WIP():
         self.model_g.set_knee_ref(v)
         self.model_a.set_knee_ref(v)
 
-
-def gen_friction_impulse(model_a, context):
-    fext = [zeros(3,1) for i in range(model_a.NB)]
-    zeros = [0 for i in range(model_a.NB)]
-    fext[model_a.IDX_W][0] = - fwx * ( - r) # global coordinate torq!! but q2 == 0
-    fext[model_a.IDX_W][1] = fwx
-    dq = model_a.dq()
-    Cfric = model_a.inverse_dynamics(zeros, fext, impulse=True).subs(context)
-    H = MatrixSymbol("H", model_a.NB, model_a.NB)
-    delta = H.inverse() * (-Cfric)
-    sol = solve(-r * (dq[model_a.IDX_W] + delta[model_a.IDX_W]) - (dq[model_a.IDX_X] + delta[model_a.IDX_X]), fwx)
-    delta_sol = delta.subs(context | {fwx:sol})
-    new_dqv = dq + delta_sol
-    f = lambdify([H, dq], new_dqv)
-    def friction_impulse(qv, dqv):
-        return f(model_a.H_f(*qv, *dqv), *dqv)
-    return friction_impulse
 
 def test():
     model = WIP()
