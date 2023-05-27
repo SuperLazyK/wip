@@ -382,13 +382,16 @@ def view(model, eh=None, dt=0.001, Hz=None):
         Hz = 1./dt
 
     pause = True
+    oneStep = False
     def event_handler(key, shifted):
         eh(key, shifted)
-        nonlocal pause
+        nonlocal pause, oneStep
         if key == 'q':
             sys.exit()
         elif key == 's':
             pause = pause ^ True
+        elif key == 'a':
+            oneStep = oneStep ^ True
 
     while True:
         cmds = model.draw()
@@ -402,9 +405,9 @@ def view(model, eh=None, dt=0.001, Hz=None):
 
         if pause:
             continue
-
         t = t + dt
-
         model.step(dt)
+        if oneStep:
+            pause = True
 
 

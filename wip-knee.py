@@ -224,8 +224,11 @@ class WIP():
 
     def land(self):
         print("land")
+        print(self.model_a.dq_v)
         self.model_a.dq_v = self.impulse()
+        print(self.model_a.dq_v)
         self.model_g.q_v = self.model_a.q_v[self.model_a.IDX_Y:]
+        self.model_g.q_v[self.model_g.IDX_Y] = self.model_g.q_v[self.model_g.IDX_Y] - context[r]
         self.model_g.dq_v = self.model_a.dq_v[self.model_a.IDX_Y:]
         self.model_g.x0_v = self.model_a.q_v[self.model_a.IDX_X] - context[r] * self.model_a.q_v[self.model_a.IDX_W]
         self.use_ground = True
