@@ -110,8 +110,8 @@ class WIPG(LinkTreeModel):
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
-        max_torq_w = 3.5 # Nm
-        max_torq_k = 40 # Nm
+        max_torq_w = 150 # Nm
+        max_torq_k = 200 # Nm
         #self.v_uw = np.clip(-max_torq_w, max_torq_w, v_uw)
         #self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
         self.v_uk = v_uk
@@ -122,7 +122,7 @@ class WIPG(LinkTreeModel):
     def hook_pre_step(self):
         print("q", self.q_v)
         print("dq", self.dq_v)
-        print("uw", self.v_uw)
+        print("uw", self.v_uw, self.v_uk)
 
     def hook_post_step(self):
         print("ddq", self.ddq_v)
@@ -134,7 +134,7 @@ class WIPG(LinkTreeModel):
         self.qh_ref = v
 
     def on_ground(self):
-        return self.q_v[self.IDX_Y] < context[r]
+        return self.q_v[self.IDX_Y] < 0
 
 class WIPA(LinkTreeModel):
 
@@ -191,6 +191,14 @@ class WIPA(LinkTreeModel):
     def on_ground(self):
         return self.q_v[self.IDX_Y] < context[r]
 
+    def hook_pre_step(self):
+        print("q", self.q_v)
+        print("dq", self.dq_v)
+        print("uw", self.v_uw, self.v_uk)
+
+    def hook_post_step(self):
+        pass
+
 class WIP():
 
     def __init__(self):
@@ -217,10 +225,19 @@ class WIP():
 
     def jump(self):
         print("jump")
+        model_a = self.model_a
+        model_g = self.model_g
+        model_a.q_v[model_a.IDX_X] = self.model_g.x0_v-model_g.q_v[model_g.IDX_W] * context[r]
+        model_a.q_v[model_a.IDX_Y] = model_g.q_v[model_g.IDX_Y] + context[r]
+        model_a.q_v[model_a.IDX_W] = model_g.q_v[model_g.IDX_W]
+        model_a.q_v[model_a.IDX_L] = model_g.q_v[model_g.IDX_L]
+        model_a.q_v[model_a.IDX_H] = model_g.q_v[model_g.IDX_H]
+        model_a.dq_v[model_a.IDX_X] = model_g.dq_v[model_g.IDX_W] * context[r]
+        model_a.dq_v[model_a.IDX_Y] = model_g.dq_v[model_g.IDX_Y]
+        model_a.dq_v[model_a.IDX_W] = model_g.dq_v[model_g.IDX_W]
+        model_a.dq_v[model_a.IDX_L] = model_g.dq_v[model_g.IDX_L]
+        model_a.dq_v[model_a.IDX_H] = model_g.dq_v[model_g.IDX_H]
         self.use_ground = False
-        #model_a.q_v = model_g.
-        #model_a.dq_v = model_g.
-        pass
 
     def land(self):
         print("land")
@@ -230,7 +247,7 @@ class WIP():
         self.model_g.q_v = self.model_a.q_v[self.model_a.IDX_Y:]
         self.model_g.q_v[self.model_g.IDX_Y] = self.model_g.q_v[self.model_g.IDX_Y] - context[r]
         self.model_g.dq_v = self.model_a.dq_v[self.model_a.IDX_Y:]
-        self.model_g.x0_v = self.model_a.q_v[self.model_a.IDX_X] - context[r] * self.model_a.q_v[self.model_a.IDX_W]
+        self.model_g.x0_v = self.model_a.q_v[self.model_a.IDX_X] + context[r] * self.model_a.q_v[self.model_a.IDX_W]
         self.use_ground = True
 
     def gen_friction_impulse(self, model, context):
