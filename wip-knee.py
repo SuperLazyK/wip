@@ -30,6 +30,8 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
 b = 400.
 k = b * b / 4*(context[mh] + context[ml] + context[mw]) # zeta == 1
 
+np.set_printoptions(precision=3, suppress=True)
+
 class WIPG(LinkTreeModel):
 
     def __init__(self):
@@ -119,13 +121,10 @@ class WIPG(LinkTreeModel):
         #self.v_uk = 0
         #self.v_uw = 0
 
-    def hook_pre_step(self):
-        print("q", self.q_v)
-        print("dq", self.dq_v)
-        print("uw", self.v_uw, self.v_uk)
-
-    def hook_post_step(self):
-        print("ddq", self.ddq_v)
+    def draw_text(self):
+        return [ f"q : {self.q_v}"
+               , f"dq : {self.dq_v}"
+               ]
 
     def set_vel_ref(self, v):
         self.v_ref = v
@@ -199,6 +198,11 @@ class WIPA(LinkTreeModel):
     def hook_post_step(self):
         pass
 
+    def draw_text(self):
+        return [ f"q : {self.q_v}"
+               , f"dq : {self.dq_v}"
+               ]
+
 class WIP():
 
     def __init__(self):
@@ -224,7 +228,10 @@ class WIP():
             return self.model_a.draw()
 
     def draw_text(self):
-        return [f"q:{'grd' if self.use_ground else 'air'}"]
+        if self.use_ground:
+            return ["mode : grd"] + self.model_g.draw_text()
+        else:
+            return ["mode : air"] + self.model_a.draw_text()
 
     def jump(self):
         print("jump")
