@@ -261,6 +261,9 @@ class LinkTreeModel:
     def draw(self):
         return self.draw_cmds(self.q_v, self.dq_v, self.v_draw_input())
 
+    def draw_text(self):
+        return []
+
     def update_sim_input(self):
         pass
 
@@ -398,7 +401,7 @@ def view(model, eh=None, dt=0.001, Hz=None):
 
         viewer.handle_event(event_handler)
         viewer.clear()
-        viewer.text([ f"t: {t:.03f}" ])
+        viewer.text([ f"t: {t:.03f}" ] + model.draw_text())
         viewer.draw(cmds)
         viewer.draw_horizon(0)
         viewer.flush(Hz)

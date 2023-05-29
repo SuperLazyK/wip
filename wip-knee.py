@@ -223,6 +223,9 @@ class WIP():
         else:
             return self.model_a.draw()
 
+    def draw_text(self):
+        return [f"q:{'grd' if self.use_ground else 'air'}"]
+
     def jump(self):
         print("jump")
         model_a = self.model_a
