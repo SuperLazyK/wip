@@ -114,12 +114,12 @@ class WIPG(LinkTreeModel):
 
         max_torq_w = 150 # Nm
         max_torq_k = 200 # Nm
-        #self.v_uw = np.clip(-max_torq_w, max_torq_w, v_uw)
-        #self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
-        self.v_uk = v_uk
-        self.v_uw = v_uw
-        #self.v_uk = 0
-        #self.v_uw = 0
+        #self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
+        #self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
+        #self.v_uk = v_uk
+        #self.v_uw = v_uw
+        self.v_uk = 0
+        self.v_uw = 0
 
     def draw_text(self):
         return [ f"q : {self.q_v}"
@@ -157,6 +157,8 @@ class WIPA(LinkTreeModel):
         self.q_v[self.IDX_L]=np.pi/4
         self.q_v[self.IDX_Y]=1
         self.dq_v[self.IDX_X]=1
+        #self.dq_v[self.IDX_W]=10
+        #self.dq_v[self.IDX_L]=10
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
@@ -174,7 +176,7 @@ class WIPA(LinkTreeModel):
         Kd = Kp * 0.1
         v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
         max_torq_k = 40 # Nm
-        self.v_uk = np.clip(-max_torq_k, max_torq_k, v_uk)
+        self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
         #self.v_uk = 0
         self.v_uw = 0
 
@@ -273,6 +275,7 @@ class WIP():
         delta_sol = delta.subs(context | {fwx:sol})
         new_dqv = Matrix(dq) + delta_sol
         f = lambdify([Hinv] + q + dq, new_dqv)
+
         def friction_impulse():
             Hv = np.linalg.inv(model.H_f(*model.all_vals()))
             return f(Hv, *model.q_v, *model.dq_v).reshape(-1)
@@ -308,3 +311,4 @@ def test():
 
 if __name__ == '__main__':
     test()
+
