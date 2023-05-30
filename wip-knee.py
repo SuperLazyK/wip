@@ -115,14 +115,10 @@ class WIPG(LinkTreeModel):
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
-        max_torq_w = 5 # Nm
+        max_torq_w = 4 # Nm
         max_torq_k = 50 # Nm
         self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
         self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-        #self.v_uk = v_uk
-        #self.v_uw = v_uw
-        #self.v_uk = 0
-        #self.v_uw = 0
 
     def draw_text(self):
         return [ f"q : {self.q_v}"
