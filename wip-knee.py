@@ -115,7 +115,7 @@ class WIPG(LinkTreeModel):
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
-        max_torq_w = 4 # Nm
+        max_torq_w = 5 # Nm
         max_torq_k = 50 # Nm
         self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
         self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
@@ -178,7 +178,7 @@ class WIPA(LinkTreeModel):
         Kp = 100
         Kd = Kp * 0.1
         v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
-        max_torq_k = 40 # Nm
+        max_torq_k = 50 # Nm
         self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
         #self.v_uk = 0
         self.v_uw = 0
