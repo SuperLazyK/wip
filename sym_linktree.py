@@ -380,7 +380,6 @@ def view(model, eh=None, dt=0.001, Hz=None):
     import graphic
     viewer = graphic.Viewer(scale=200, offset=[0, 0.2])
 
-    t = 0
     if Hz is None:
         Hz = 1./dt
 
@@ -401,14 +400,13 @@ def view(model, eh=None, dt=0.001, Hz=None):
 
         viewer.handle_event(event_handler)
         viewer.clear()
-        viewer.text([ f"t: {t:.03f}" ] + model.draw_text())
+        viewer.text([ f"t: {model.t:.03f}" ] + model.draw_text())
         viewer.draw(cmds)
         viewer.draw_horizon(0)
         viewer.flush(Hz)
 
         if pause:
             continue
-        t = t + dt
         model.step(dt)
         if oneStep:
             pause = True

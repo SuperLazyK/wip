@@ -44,7 +44,7 @@ class WIPG(LinkTreeModel):
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-        super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+        super().__init__([jl0, jl1], g, X0=Xpln(pi/2, 0, 0))
         _, _, x, _ = Xtoscxy(jl1.X_r_to)
         jl1.fa = x * fwy
         jl1.fy = fwy
@@ -52,13 +52,14 @@ class WIPG(LinkTreeModel):
         self.reset()
 
     def reset(self):
-        self.q_v[self.IDX_L]=np.pi/4
+        #self.q_v[self.IDX_L]=np.pi/4
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
         self.v_uk = 0
         self.v_uw = 0
         self.v_fwy = 0
+        self.t = 0
         #self.check_vwip_param()
 
     def check_vwip_param(self):
@@ -95,6 +96,7 @@ class WIPG(LinkTreeModel):
             self.v_fwy = 0
 
     def update_sim_input(self):
+        return
         Kp = 100
         Kd = Kp * 0.1
 
@@ -133,7 +135,7 @@ class WIPG(LinkTreeModel):
         self.qh_ref = v
 
     def on_ground(self):
-        return self.q_v[self.IDX_Y] < 0
+        return self.q_v[self.IDX_Y] <= 0.00001
 
 class WIPA(LinkTreeModel):
 
@@ -149,12 +151,12 @@ class WIPA(LinkTreeModel):
         jl1 = WheelJointLink("qw", mw, r, RevoluteJoint(), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-        super().__init__([jl0x, jl0y, jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
+        super().__init__([jl0x, jl0y, jl1], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
         self.reset()
 
     def reset(self):
-        self.q_v[self.IDX_L]=np.pi/4
+        #self.q_v[self.IDX_L]=np.pi/4
         self.q_v[self.IDX_Y]=1
         self.dq_v[self.IDX_X]=1
         #self.dq_v[self.IDX_W]=10
@@ -172,6 +174,7 @@ class WIPA(LinkTreeModel):
         return np.array([self.v_uw, self.v_uk])
 
     def update_sim_input(self):
+        return
         Kp = 100
         Kd = Kp * 0.1
         v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
@@ -211,7 +214,13 @@ class WIP():
         self.model_g = WIPG()
         self.model_a = WIPA()
         self.gen_friction_impulse(self.model_a, context)
+        self.reset()
+
+    def reset(self):
         self.use_ground = False
+        self.model_a.reset()
+        self.model_g.reset()
+        self.t = 0
 
     def step(self, dt):
         if self.use_ground:
@@ -222,6 +231,7 @@ class WIP():
             self.model_a.step(dt)
             if self.model_a.on_ground():
                 self.land()
+        self.t = self.t+dt
 
     def draw(self):
         if self.use_ground:
@@ -237,30 +247,34 @@ class WIP():
 
     def jump(self):
         print("jump")
+        #print(self.model_g.dq_v)
         model_a = self.model_a
         model_g = self.model_g
         model_a.q_v[model_a.IDX_X] = self.model_g.x0_v-model_g.q_v[model_g.IDX_W] * context[r]
         model_a.q_v[model_a.IDX_Y] = model_g.q_v[model_g.IDX_Y] + context[r]
         model_a.q_v[model_a.IDX_W] = model_g.q_v[model_g.IDX_W]
-        model_a.q_v[model_a.IDX_L] = model_g.q_v[model_g.IDX_L]
-        model_a.q_v[model_a.IDX_H] = model_g.q_v[model_g.IDX_H]
-        model_a.dq_v[model_a.IDX_X] = model_g.dq_v[model_g.IDX_W] * context[r]
+        #model_a.q_v[model_a.IDX_L] = model_g.q_v[model_g.IDX_L]
+        #model_a.q_v[model_a.IDX_H] = model_g.q_v[model_g.IDX_H]
+        model_a.dq_v[model_a.IDX_X] = -model_g.dq_v[model_g.IDX_W] * context[r]
         model_a.dq_v[model_a.IDX_Y] = model_g.dq_v[model_g.IDX_Y]
         model_a.dq_v[model_a.IDX_W] = model_g.dq_v[model_g.IDX_W]
-        model_a.dq_v[model_a.IDX_L] = model_g.dq_v[model_g.IDX_L]
-        model_a.dq_v[model_a.IDX_H] = model_g.dq_v[model_g.IDX_H]
+        #model_a.dq_v[model_a.IDX_L] = model_g.dq_v[model_g.IDX_L]
+        #model_a.dq_v[model_a.IDX_H] = model_g.dq_v[model_g.IDX_H]
         self.use_ground = False
+        #print(self.model_a.dq_v)
 
     def land(self):
         print("land")
-        print(self.model_a.dq_v)
+        #print(self.model_a.dq_v)
         self.model_a.dq_v = self.impulse()
-        print(self.model_a.dq_v)
+        #print(self.model_a.dq_v)
         self.model_g.q_v = self.model_a.q_v[self.model_a.IDX_Y:]
         self.model_g.q_v[self.model_g.IDX_Y] = self.model_g.q_v[self.model_g.IDX_Y] - context[r]
         self.model_g.dq_v = self.model_a.dq_v[self.model_a.IDX_Y:]
         self.model_g.x0_v = self.model_a.q_v[self.model_a.IDX_X] + context[r] * self.model_a.q_v[self.model_a.IDX_W]
         self.use_ground = True
+        #print(self.model_g.dq_v)
+        #print(self.model_g.q_v.tolist())
 
     def gen_friction_impulse(self, model, context):
         fext = [zeros(3,1) for i in range(model.NB)]
@@ -306,6 +320,8 @@ def test():
             model.set_knee_ref(np.deg2rad(-45))
         elif key == 'k':
             model.set_knee_ref(np.deg2rad(0))
+        elif key == 'r':
+            model.reset()
 
     view(model, event_handler, dt=0.001)
 
