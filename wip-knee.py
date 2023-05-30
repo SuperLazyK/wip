@@ -50,9 +50,10 @@ class WIPG(LinkTreeModel):
         jl1.fa = x * fwy
         jl1.fy = fwy
         self.gen_function(context)
-        self.reset()
+        self.reset_state()
 
-    def reset(self):
+    def reset_state(self):
+        super().reset_state()
         self.q_v[self.IDX_L]=np.pi/4
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
@@ -126,6 +127,8 @@ class WIPG(LinkTreeModel):
     def draw_text(self):
         return [ f"q : {self.q_v}"
                , f"dq : {self.dq_v}"
+               , f"knee: {self.v_uk}"
+               , f"wheel: {self.v_uw}"
                ]
 
     def set_vel_ref(self, v):
@@ -154,9 +157,10 @@ class WIPA(LinkTreeModel):
         #super().__init__([jl0x, jl0y, jl1], g, X0=Xpln(0, 0, 0))
         super().__init__([jl0x, jl0y, jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
-        self.reset()
+        self.reset_state()
 
-    def reset(self):
+    def reset_state(self):
+        super().reset_state()
         self.q_v[self.IDX_L]=np.pi/4
         self.q_v[self.IDX_Y]=1
         self.dq_v[self.IDX_X]=1
@@ -207,6 +211,8 @@ class WIPA(LinkTreeModel):
     def draw_text(self):
         return [ f"q : {self.q_v}"
                , f"dq : {self.dq_v}"
+               , f"knee: {self.v_uk}"
+               , f"wheel: {self.v_uw}"
                ]
 
 class WIP():
@@ -215,12 +221,12 @@ class WIP():
         self.model_g = WIPG()
         self.model_a = WIPA()
         self.gen_friction_impulse(self.model_a, context)
-        self.reset()
+        self.reset_state()
 
-    def reset(self):
+    def reset_state(self):
         self.use_ground = False
-        self.model_a.reset()
-        self.model_g.reset()
+        self.model_a.reset_state()
+        self.model_g.reset_state()
         self.t = 0
 
     def step(self, dt):
@@ -322,7 +328,7 @@ def test():
         elif key == 'k':
             model.set_knee_ref(np.deg2rad(0))
         elif key == 'r':
-            model.reset()
+            model.reset_state()
 
     view(model, event_handler, dt=0.001)
 
