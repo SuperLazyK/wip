@@ -29,8 +29,11 @@ context = { mw: 1, Iw: 1./200, r: 0.1,
         }
 b = 400.
 k = b * b / 4*(context[mh] + context[ml] + context[mw]) # zeta == 1
-max_torq_w = 4 # Nm
+max_torq_w = 5 # Nm
 max_torq_k = 50 # Nm
+
+Kp = 100
+Kd = Kp * 0.1
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -100,10 +103,8 @@ class WIPG(LinkTreeModel):
             self.v_fwy = 0
 
     def update_sim_input(self):
-        Kp = 100
-        Kd = Kp * 0.1
-
         v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
+        self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
 
         if self.qh_ref  == 0:
             K = np.array([[-1., 11.20462078, 50.02801177]])
@@ -116,9 +117,7 @@ class WIPG(LinkTreeModel):
             a0_v = -0.36833839806552643
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
-
         self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
-        self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
 
     def draw_text(self):
         return [ f"q : {self.q_v}"
@@ -175,11 +174,9 @@ class WIPA(LinkTreeModel):
         return np.array([self.v_uw, self.v_uk])
 
     def update_sim_input(self):
-        Kp = 100
-        Kd = Kp * 0.1
         v_uk = Kp*(self.qh_ref - self.q_v[self.IDX_H]) - Kd * self.dq_v[self.IDX_H] + self.cancel_force[self.IDX_H]()
         self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
-        #self.v_uk = 0
+
         self.v_uw = 0
 
     def hook_post_step(self):
