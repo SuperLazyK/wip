@@ -44,7 +44,8 @@ class WIPG(LinkTreeModel):
         jl1 = WheelJointLink("qw", mw, r, RackPinionJoint(r, x0), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-        super().__init__([jl0, jl1], g, X0=Xpln(pi/2, 0, 0))
+        super().__init__([jl0, jl1, jl2, jl3], g, X0=Xpln(pi/2, 0, 0))
+        #super().__init__([jl0, jl1], g, X0=Xpln(pi/2, 0, 0))
         _, _, x, _ = Xtoscxy(jl1.X_r_to)
         jl1.fa = x * fwy
         jl1.fy = fwy
@@ -52,7 +53,7 @@ class WIPG(LinkTreeModel):
         self.reset()
 
     def reset(self):
-        #self.q_v[self.IDX_L]=np.pi/4
+        self.q_v[self.IDX_L]=np.pi/4
         self.v_ref = 0 # horizontal velocity
         self.qh_ref = 0 # knee
         self.x0_v = 0
@@ -96,7 +97,6 @@ class WIPG(LinkTreeModel):
             self.v_fwy = 0
 
     def update_sim_input(self):
-        return
         Kp = 100
         Kd = Kp * 0.1
 
@@ -114,14 +114,14 @@ class WIPG(LinkTreeModel):
 
         v_uw = wip_wheel_torq(K, self.v_ref, self.q_v[self.IDX_W:], self.dq_v[self.IDX_W:], a0_v)
 
-        max_torq_w = 150 # Nm
+        max_torq_w = 100 # Nm
         max_torq_k = 200 # Nm
-        #self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
-        #self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
+        self.v_uw = np.clip(v_uw, -max_torq_w, max_torq_w)
+        self.v_uk = np.clip(v_uk, -max_torq_k, max_torq_k)
         #self.v_uk = v_uk
         #self.v_uw = v_uw
-        self.v_uk = 0
-        self.v_uw = 0
+        #self.v_uk = 0
+        #self.v_uw = 0
 
     def draw_text(self):
         return [ f"q : {self.q_v}"
@@ -151,12 +151,13 @@ class WIPA(LinkTreeModel):
         jl1 = WheelJointLink("qw", mw, r, RevoluteJoint(), XT=Xpln(pi/2, 0, 0), Icog=Iw)
         jl2 = StickJointLink("ql", ml, ll, RevoluteJoint(), XT=Xpln(-pi/2, ll, 0), cx=ll, Icog=Il, tau=uw)
         jl3 = StickJointLink("qh", mh, lh, RevoluteJoint(), XT=Xpln(0, lh, 0), cx=lh, Icog=Ih, tau=uk)
-        super().__init__([jl0x, jl0y, jl1], g, X0=Xpln(0, 0, 0))
+        #super().__init__([jl0x, jl0y, jl1], g, X0=Xpln(0, 0, 0))
+        super().__init__([jl0x, jl0y, jl1, jl2, jl3], g, X0=Xpln(0, 0, 0))
         self.gen_function(context)
         self.reset()
 
     def reset(self):
-        #self.q_v[self.IDX_L]=np.pi/4
+        self.q_v[self.IDX_L]=np.pi/4
         self.q_v[self.IDX_Y]=1
         self.dq_v[self.IDX_X]=1
         #self.dq_v[self.IDX_W]=10
@@ -253,13 +254,13 @@ class WIP():
         model_a.q_v[model_a.IDX_X] = self.model_g.x0_v-model_g.q_v[model_g.IDX_W] * context[r]
         model_a.q_v[model_a.IDX_Y] = model_g.q_v[model_g.IDX_Y] + context[r]
         model_a.q_v[model_a.IDX_W] = model_g.q_v[model_g.IDX_W]
-        #model_a.q_v[model_a.IDX_L] = model_g.q_v[model_g.IDX_L]
-        #model_a.q_v[model_a.IDX_H] = model_g.q_v[model_g.IDX_H]
+        model_a.q_v[model_a.IDX_L] = model_g.q_v[model_g.IDX_L]
+        model_a.q_v[model_a.IDX_H] = model_g.q_v[model_g.IDX_H]
         model_a.dq_v[model_a.IDX_X] = -model_g.dq_v[model_g.IDX_W] * context[r]
         model_a.dq_v[model_a.IDX_Y] = model_g.dq_v[model_g.IDX_Y]
         model_a.dq_v[model_a.IDX_W] = model_g.dq_v[model_g.IDX_W]
-        #model_a.dq_v[model_a.IDX_L] = model_g.dq_v[model_g.IDX_L]
-        #model_a.dq_v[model_a.IDX_H] = model_g.dq_v[model_g.IDX_H]
+        model_a.dq_v[model_a.IDX_L] = model_g.dq_v[model_g.IDX_L]
+        model_a.dq_v[model_a.IDX_H] = model_g.dq_v[model_g.IDX_H]
         self.use_ground = False
         #print(self.model_a.dq_v)
 
