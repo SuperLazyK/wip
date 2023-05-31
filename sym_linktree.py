@@ -42,6 +42,8 @@ class LinkTreeModel:
         self.update_vel_X()
         self.composite_inertia()
         self.cog = self.calc_cog()
+        self.joint_pos = Matrix([self.pos(i).T for i in range(self.NB)])
+        self.joint_vel = Matrix([self.vel(i).T for i in range(self.NB)])
 
         self.reset_state()
 
@@ -190,6 +192,14 @@ class LinkTreeModel:
         _, cx, cy, _ = I2mc(transInertia(self.Ic[ith], self.jointlinks[ith].X_r_to))
         return Matrix([cx, cy])
 
+    def pos(self, ith=0):
+        _, _, x, y = Xtoscxy(self.jointlinks[ith].X_r_to)
+        return Matrix([x, y])
+
+    def vel(self, ith=0):
+        p = self.pos(ith)
+        return p.diff(symbols("t")).subs({q.diff():dq for q, dq in zip(self.q(), self.dq())})
+
     def joint_info(self, simp=True):
         for jl in self.jointlinks:
             print(jl.name, fromX(jl.X_r_to, simp))
@@ -252,9 +262,11 @@ class LinkTreeModel:
         dq_sym_list = self.dq()
         input_sym_list = self.draw_input()
         draw_cmd_fns = [jl.gen_draw_cmds(q_sym_list + dq_sym_list + input_sym_list, context) for jl in self.jointlinks]
-        eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(context))
+        self.eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(context))
+        self.eval_joint_pos = lambdify(q_sym_list + input_sym_list, self.joint_pos.subs(context))
+        self.eval_joint_vel = lambdify(q_sym_list + input_sym_list, self.joint_vel.subs(context))
         def draw_cmds(qv, dqv, v):
-            p = eval_cog_pos(*qv, *v)
+            p = self.eval_cog_pos(*qv, *v)
             return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue", name="cog"))
         return draw_cmds
 

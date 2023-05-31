@@ -1,6 +1,7 @@
 from sympy import *
 from geometry import *
 from sym_arith import *
+from sympy.physics.mechanics import *
 
 #-------------------------
 # Joint/Link
@@ -125,9 +126,9 @@ class JointLink():
         self.I = I # Inertia tensor on body coordinate
         self.m = m
         self.XT = XT
-        self.q = symbols(name)
-        self.dq = symbols("d"+name)
-        self.ddq = symbols("dd"+name)
+        self.q = dynamicsymbols(name)
+        self.dq = dynamicsymbols("d"+name)
+        self.ddq = dynamicsymbols("dd"+name)
         self.fa = 0
         self.fx = 0
         self.fy = 0
