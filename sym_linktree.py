@@ -264,7 +264,7 @@ class LinkTreeModel:
         draw_cmd_fns = [jl.gen_draw_cmds(q_sym_list + dq_sym_list + input_sym_list, context) for jl in self.jointlinks]
         self.eval_cog_pos = lambdify(q_sym_list + input_sym_list, self.cog.subs(context))
         self.eval_joint_pos = lambdify(q_sym_list + input_sym_list, self.joint_pos.subs(context))
-        self.eval_joint_vel = lambdify(q_sym_list + input_sym_list, self.joint_vel.subs(context))
+        self.eval_joint_vel = lambdify(q_sym_list + dq_sym_list + input_sym_list, self.joint_vel.subs(context))
         def draw_cmds(qv, dqv, v):
             p = self.eval_cog_pos(*qv, *v)
             return sum([f(np.concatenate([qv, dqv, v])) for f in draw_cmd_fns], plot_point_cmd(p[0,0], p[1,0], 0.01, color="blue", name="cog"))
@@ -297,6 +297,14 @@ class LinkTreeModel:
         self.q_v = self.q_v + self.dq_v * dt
         self.hook_post_step()
 
+    def v_cog(self):
+        return self.eval_cog_pos(*self.q_v, *self.v_draw_input())
+
+    def v_pos(self):
+        return self.eval_joint_pos(*self.q_v, *self.v_draw_input())
+
+    def v_vel(self):
+        return self.eval_joint_vel(*self.q_v, *self.dq_v, *self.v_draw_input())
 
 def test1():
     g = symbols('g')
